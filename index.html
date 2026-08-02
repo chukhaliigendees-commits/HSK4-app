@@ -624,6 +624,7 @@
     const WORDS_PER_TEST = 15;
     let isPaidUser = false;
     let currentUser = null;
+    let currentSessionToken = '';
     
     let globalIndex = 0;
     let savedGlobalIndex = 0;
@@ -965,10 +966,29 @@
         loadWord(globalIndex);
     }
 
-    // 🔒 НЭГ БҮРТГЭЛЭЭР ОЛОН ТӨХӨӨРӨМЖИЙГ ХОРИГЛОХ БА СЕССИЙГ БАЙНГЫН ШАЛГАХ
+    // 📡 REALTIME LISTEN: ӨӨР ТӨХӨӨРӨМЖ НЭВТРЭХ ТУХАЙД ШУУД САЛГАХ
+    function listenToSessionChanges(userId) {
+        supabaseClient
+            .channel('public:profiles')
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'profiles',
+                filter: `id=eq.${userId}`
+            }, payload => {
+                if (payload.new && payload.new.current_session_id !== currentSessionToken) {
+                    alert("🔒 Таны дансаар өөр төхөөрөмж дээр нэвтэрсэн тул энэ төхөөрөмжөөс салгагдлаа!");
+                    supabaseClient.auth.signOut().then(() => {
+                        window.location.reload();
+                    });
+                }
+            })
+            .subscribe();
+    }
+
     async function checkAndLockSession(user, session) {
         if (!user || !session) return true;
-        const currentToken = session.access_token.slice(-20);
+        currentSessionToken = session.access_token.slice(-20);
 
         try {
             const { data: profile } = await supabaseClient
@@ -978,31 +998,30 @@
                 .single();
 
             if (profile) {
-                // Өөр төхөөрөмж дээр нэвтэрсэн эсэхийг шалгах
-                if (profile.current_session_id && profile.current_session_id !== currentToken) {
+                if (profile.current_session_id && profile.current_session_id !== currentSessionToken) {
                     alert("🔒 Таны дансаар өөр төхөөрөмж дээр нэвтэрсэн тул энэ төхөөрөмжөөс салгагдлаа!");
                     await supabaseClient.auth.signOut();
                     window.location.reload();
                     return false;
                 }
 
-                // Онлайн датабэйсээс сүүлчийн индексийг унших
                 if (profile.user_index !== undefined && profile.user_index !== null) {
                     globalIndex = parseInt(profile.user_index);
                 }
             } else {
-                // Шинэ профиль үүсгэх
                 await supabaseClient
                     .from('profiles')
-                    .insert([{ id: user.id, current_session_id: currentToken, user_index: 0 }]);
+                    .insert([{ id: user.id, current_session_id: currentSessionToken, user_index: 0 }]);
             }
+
+            listenToSessionChanges(user.id);
+
         } catch (err) {
             console.error("Session check error:", err);
         }
         return true;
     }
 
-    // SUPABASE ДЭЭР ҮГИЙН ИНДЕКСИЙГ ХАДГАЛАХ
     async function saveUserProgress(index) {
         if (!currentUser || isFavOnlyMode) return;
         try {
@@ -1065,8 +1084,8 @@
             alert("Алдаа: " + error.message);
         } else if (data && data.session) {
             const newToken = data.session.access_token.slice(-20);
+            currentSessionToken = newToken;
             
-            // Шинэ төхөөрөмж нэвтрэхэд Сессийн ID-г DB дээр шууд солино
             await supabaseClient
                 .from('profiles')
                 .upsert({ id: data.user.id, current_session_id: newToken });
@@ -1130,17 +1149,9 @@
     async function loadWord(index) {
         if(!activeWordsList || activeWordsList.length === 0) return;
 
-        // Өөр төхөөрөмж нэвтэрсэн үү гэдгийг дарах болгонд шалгах
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session && currentUser) {
-            const isOk = await checkAndLockSession(currentUser, session);
-            if (!isOk) return;
-        }
-
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
 
-        // Үндсэн горимд явж байх үед сүүлчийн индексийг датабэйст хадгална
         if (!isFavOnlyMode) {
             saveUserProgress(index);
         }
