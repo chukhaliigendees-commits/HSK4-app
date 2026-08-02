@@ -629,6 +629,7 @@
     let isInfoVisible = true;
     let favorites = JSON.parse(localStorage.getItem('hsk4_favorites') || '[]');
     let activeWordsList = [];
+    let rawWordsData = [];
     let isFavOnlyMode = false;
     let isAnimating = false;
 
@@ -651,25 +652,36 @@
     let currentQuizIndex = 0;
     let score = 0;
 
-    const rawWordsData = [
-        { char: "爱情", pinyin: "ài qíng", mn: "Хайр дурлал", ex_cn: "他们的爱情很感人。", ex_py: "Tāmen de àiqíng hěn gǎnrén.", ex_mn: "Тэдний хайр дурлал маш сэтгэл хөдөлгөж байна." },
-        { char: "安排", pinyin: "ān pái", mn: "Төлөвлөх, зохицуулах", ex_cn: "这个安排很好。", ex_py: "Zhège ānpái hěn hǎo.", ex_mn: "Энэ зохион байгуулалт маш сайн байна." },
-        { char: "安全", pinyin: "ān quán", mn: "Аюулгүй", ex_cn: "注意安全。", ex_py: "Zhùyì ānquán.", ex_mn: "Аюулгүй байдалдаа анхаараарай." },
-        { char: "按时", pinyin: "àn shí", mn: "Цагтаа, хугацаандаа", ex_cn: "请按时吃药。", ex_py: "Qǐng ànshí chī yào.", ex_mn: "Эмээ цагт нь уугаарай." },
-        { char: "按照", pinyin: "àn zhào", mn: "Дагуу, дагуулан", ex_cn: "按照要求做。", ex_py: "Ànzhào yāoqiú zuò.", ex_mn: "Шаардлагын дагуу хий." },
-        { char: "百分之", pinyin: "bǎi fēn zhī", mn: "Хувь (%)", ex_cn: "百分之八十的人同意。", ex_py: "Bǎi fēn zhī bāshí de rén tóngyì。", ex_mn: "Хүмүүсийн 80 хувь нь зөвшөөрсөн." },
-        { char: "棒", pinyin: "bàng", mn: "Мундаг, сайн", ex_cn: "你真棒！", ex_py: "Nǐ zhēn bàng!", ex_mn: "Чи үнэхээр мундаг юм!" },
-        { char: "包子", pinyin: "bāo zi", mn: "Бууз", ex_cn: "早上吃包子。", ex_py: "Zǎoshang chī bāozi.", ex_mn: "Өглөө бууз иднэ." },
-        { char: "保护", pinyin: "bǎo hù", mn: "Хамгаалах", ex_cn: "保护环境。", ex_py: "Bǎohù huánjìng.", ex_mn: "Байгаль орчноо хамгаалах." },
-        { char: "保证", pinyin: "bǎo zhèng", mn: "Баталгаажуулах, амлах", ex_cn: "我保证完成任务。", ex_py: "Wǒ bǎozhèng wánchéng rènwu.", ex_mn: "Би даалгавраа биелүүлнэ гэж амлаж байна." },
-        { char: "报名", pinyin: "bào míng", mn: "Бүртгүүлэх", ex_cn: "我想报名参加考试。", ex_py: "Wǒ xiǎng bàomíng cānjiā kǎoshì.", ex_mn: "Би шалгалтад бүртгүүлмээр байна." },
-        { char: "抱", pinyin: "bào", mn: "Тэврэх", ex_cn: "妈妈抱着孩子。", ex_py: "Māma bàozhe háizi.", ex_mn: "Ээж хүүхдээ тэвэрч байна." },
-        { char: "抱歉", pinyin: "bào qiàn", mn: "Уучлаарай, өршөөгөөрэй", ex_cn: "非常抱歉，我迟到了。", ex_py: "Fēicháng bàoqiàn, wǒ chídào le.", ex_mn: "Маш их уучлаарай, би хоцорчихлоо." },
-        { char: "倍", pinyin: "bèi", mn: "Дахин (дахин их)", ex_cn: "收入增加了两倍。", ex_py: "Shōurù zēngjiā le liǎng bèi.", ex_mn: "Орлого хоёр дахин нэмэгдсэн." },
-        { char: "本来", pinyin: "běn lái", mn: "Анхнаасаа, анх", ex_cn: "我本来打算去的。", ex_py: "Wǒ běnlái dǎsuàn qù de.", ex_mn: "Би анхнаасаа явах бодолтой байсан." }
-    ];
+    /* 🌐 SUPABASE ДАТАБЭЙСЭЭС 600 ҮГЭЭ ТАТАХ ФУНКЦ */
+    async function fetchAllWordsFromSupabase() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('words')
+                .select('*')
+                .order('id', { ascending: true });
 
-    activeWordsList = rawWordsData;
+            if (error) {
+                console.error("Supabase-ээс үг татахад алдаа:", error);
+                return false;
+            }
+
+            if (data && data.length > 0) {
+                rawWordsData = data.map(w => ({
+                    char: w.char,
+                    pinyin: w.pinyin,
+                    mn: w.meaning,
+                    ex_cn: w.example_sentence || "",
+                    ex_py: w.example_pinyin || "",
+                    ex_mn: w.example_translation || ""
+                }));
+                activeWordsList = rawWordsData;
+                return true;
+            }
+        } catch (e) {
+            console.error("Fetch exception:", e);
+        }
+        return false;
+    }
 
     function loadVoices() {
         if ('speechSynthesis' in window) {
@@ -682,7 +694,7 @@
     }
 
     function playTTS(text) {
-        if (!('speechSynthesis' in window)) return;
+        if (!('speechSynthesis' in window) || !text) return;
         window.speechSynthesis.cancel();
 
         const msg = new SpeechSynthesisUtterance(text);
@@ -707,8 +719,8 @@
         window.speechSynthesis.speak(msg);
     }
 
-    function speakWord() { playTTS(activeWordsList[globalIndex].char); }
-    function speakExample() { playTTS(activeWordsList[globalIndex].ex_cn); }
+    function speakWord() { if(activeWordsList[globalIndex]) playTTS(activeWordsList[globalIndex].char); }
+    function speakExample() { if(activeWordsList[globalIndex]) playTTS(activeWordsList[globalIndex].ex_cn); }
 
     function togglePasswordVisibility() {
         const passwordInput = document.getElementById('auth-password');
@@ -891,6 +903,7 @@
     }
 
     function toggleFavorite() {
+        if(!activeWordsList[globalIndex]) return;
         const char = activeWordsList[globalIndex].char;
         if (favorites.includes(char)) {
             favorites = favorites.filter(c => c !== char);
@@ -902,6 +915,7 @@
     }
 
     function updateStarUI() {
+        if(!activeWordsList[globalIndex]) return;
         const char = activeWordsList[globalIndex].char;
         const starBtn = document.getElementById('star-btn');
         const favToggleBtn = document.getElementById('fav-toggle');
@@ -1001,6 +1015,10 @@
 
     async function initApp() {
         updateStreak();
+
+        // 🌐 Supabase-ээс 600 үгийг эхлээд ачаалж оруулна
+        await fetchAllWordsFromSupabase();
+
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session && session.user) {
             currentUser = session.user;
@@ -1051,6 +1069,8 @@
         container.innerHTML = '';
         writers = [];
 
+        if(!text) return;
+
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
             const box = document.createElement('div');
@@ -1073,17 +1093,19 @@
     }
 
     function loadWord(index) {
+        if(!activeWordsList || activeWordsList.length === 0) return;
+
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
 
         document.getElementById('voice-feedback-box').classList.add('hidden');
 
         const word = activeWordsList[index];
-        document.getElementById('pinyin').innerText = word.pinyin;
-        document.getElementById('translation').innerText = word.mn;
-        document.getElementById('example-cn').innerText = word.ex_cn;
-        document.getElementById('example-pinyin').innerText = word.ex_py;
-        document.getElementById('example-mn').innerText = word.ex_mn;
+        document.getElementById('pinyin').innerText = word.pinyin || "";
+        document.getElementById('translation').innerText = word.mn || "";
+        document.getElementById('example-cn').innerText = word.ex_cn || "";
+        document.getElementById('example-pinyin').innerText = word.ex_py || "";
+        document.getElementById('example-mn').innerText = word.ex_mn || "";
 
         renderHanzi(word.char, true);
         updateStarUI();
@@ -1137,22 +1159,24 @@
         showQuizQuestion();
     }
 
-    /* 🎯 ТЕСТИЙН ДАРААХ ШИЛЖИЛТИЙГ АЛДААГҮЙ БОЛГОСОН ЛОГИК */
+    /* 🎯 ТЕСТИЙН ДАРАА ХАМГИЙН ТОД ЗАСРАСАН ШИЛЖИХ ЛОГИК */
     function showQuizQuestion() {
         if (currentQuizIndex >= quizQuestions.length) {
             const total = quizQuestions.length;
             
             if ((score / total) >= 0.8) {
-                alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, энэ хэсгийн шалгалтыг давлаа.`);
-                
                 document.getElementById('quiz-content').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
 
-                // Цааш үргэлжлэх үг байгаа эсэхийг шалгах
-                if (globalIndex < activeWordsList.length - 1) {
-                    globalIndex++; // Шууд дараагийн үг рүү шилжинэ
+                // Одоо байгаа багцын дараагийн 16, 31, 46 дахь индекс рүү шууд үсрэх
+                const nextBatchIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
+
+                if (nextBatchIndex < activeWordsList.length) {
+                    globalIndex = nextBatchIndex;
+                    alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг давлаа. Дараагийн багц (${globalIndex + 1}-ээс эхлэх) нээгдлээ!`);
                 } else {
-                    globalIndex = 0; // Үг дууссан бол эхнээс нь эхлүүлнэ
+                    globalIndex = 0;
+                    alert("👏 Баяр хүргэе! Та Supabase дээрх бүх 600 үгийг сурч дууслаа.");
                 }
                 
                 loadWord(globalIndex);
@@ -1193,7 +1217,6 @@
         });
     }
 
-    /* 🔊 ЗӨВ ХАРИУЛАХАД ҮГИЙГ ТОД ЧАНГА ХЭЛЖ СОНСГОНО */
     function handleAnswer(isCorrect, btnElement, chineseChar) {
         const allBtns = document.querySelectorAll('.quiz-option-btn');
         allBtns.forEach(b => b.style.pointerEvents = 'none');
