@@ -5,19 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HSK 4</title>
 
-    <!-- Web App (PWA) болон iPhone тохиргоо -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="HSK 4">
     <meta name="theme-color" content="#4f46e5">
 
-    <!-- iPhone Апп Лого (Icon) -->
     <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- Supabase JS SDK & Hanzi Writer SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 
@@ -626,7 +623,6 @@
     let writers = [];
     let isInfoVisible = true;
     let favorites = JSON.parse(localStorage.getItem('hsk4_favorites') || '[]');
-    let activeWordsList = [];
     let isFavOnlyMode = false;
     let isAnimating = false;
 
@@ -649,7 +645,6 @@
     let currentQuizIndex = 0;
     let score = 0;
 
-    /* ⚡ ШУУД АЧААЛАХ ХУРДТАЙ ДАТА */
     const rawWordsData = [
         { char: "爱情", pinyin: "ài qíng", mn: "Хайр дурлал", ex_cn: "他们的爱情很感人。", ex_py: "Tāmen de àiqíng hěn gǎnrén.", ex_mn: "Тэдний хайр дурлал маш сэтгэл хөдөлгөж байна." },
         { char: "安排", pinyin: "ān pái", mn: "Төлөвлөх, зохицуулах", ex_cn: "这个安排很好。", ex_py: "Zhège ānpái hěn hǎo.", ex_mn: "Энэ зохион байгуулалт маш сайн байна." },
@@ -668,9 +663,8 @@
         { char: "本来", pinyin: "běn lái", mn: "Анхнаасаа, анх", ex_cn: "我本来打算去的。", ex_py: "Wǒ běnlái dǎsuàn qù de.", ex_mn: "Би анхнаасаа явах бодолтой байсан." }
     ];
 
-    activeWordsList = rawWordsData;
+    let activeWordsList = [...rawWordsData];
 
-    /* 🎙 ТОД ЦЭВЭР ХОЛООНЫ ТОХИРГОО */
     function loadVoices() {
         if ('speechSynthesis' in window) {
             availableVoices = window.speechSynthesis.getVoices();
@@ -682,29 +676,33 @@
     }
 
     function playTTS(text) {
-        if (!('speechSynthesis' in window) || !text) return;
-        window.speechSynthesis.cancel();
+        try {
+            if (!('speechSynthesis' in window) || !text) return;
+            window.speechSynthesis.cancel();
 
-        const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'zh-CN';
-        msg.rate = 0.85; 
-        msg.pitch = 1.15;
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = 'zh-CN';
+            msg.rate = 0.85; 
+            msg.pitch = 1.15;
 
-        if (availableVoices.length === 0) {
-            availableVoices = window.speechSynthesis.getVoices();
+            if (availableVoices.length === 0) {
+                availableVoices = window.speechSynthesis.getVoices();
+            }
+
+            const bestVoice = availableVoices.find(v => v.lang.includes('zh') && (
+                v.name.includes('Natural') ||
+                v.name.includes('Xiaoxiao') ||
+                v.name.includes('Sinji') ||
+                v.name.includes('Tingting') || 
+                v.name.includes('Mei-Jia') ||
+                v.name.includes('Google 普通话')
+            )) || availableVoices.find(v => v.lang.includes('zh'));
+
+            if (bestVoice) msg.voice = bestVoice;
+            window.speechSynthesis.speak(msg);
+        } catch (e) {
+            console.error("Audio error:", e);
         }
-
-        const bestVoice = availableVoices.find(v => v.lang.includes('zh') && (
-            v.name.includes('Natural') ||
-            v.name.includes('Xiaoxiao') ||
-            v.name.includes('Sinji') ||
-            v.name.includes('Tingting') || 
-            v.name.includes('Mei-Jia') ||
-            v.name.includes('Google 普通话')
-        )) || availableVoices.find(v => v.lang.includes('zh'));
-
-        if (bestVoice) msg.voice = bestVoice;
-        window.speechSynthesis.speak(msg);
     }
 
     function speakWord() { if(activeWordsList[globalIndex]) playTTS(activeWordsList[globalIndex].char); }
@@ -930,7 +928,7 @@
             document.getElementById('fav-toggle').style.background = "#f59e0b";
             document.getElementById('fav-toggle').style.color = "#ffffff";
         } else {
-            activeWordsList = rawWordsData;
+            activeWordsList = [...rawWordsData];
             isFavOnlyMode = false;
             document.getElementById('fav-toggle').style.background = "#fef3c7";
             document.getElementById('fav-toggle').style.color = "#d97706";
@@ -1064,16 +1062,27 @@
             box.id = id;
             container.appendChild(box);
 
-            const writer = HanziWriter.create(id, char, {
-                width: 100, height: 100, padding: 5,
-                showOutline: showOutlineOption,
-                strokeColor: '#1e293b',
-                outlineColor: '#cbd5e1',
-                drawingColor: '#4f46e5',
-                strokeAnimationSpeed: 0.8,
-                delayBetweenStrokes: 250
-            });
-            writers.push(writer);
+            try {
+                if (window.HanziWriter) {
+                    const writer = HanziWriter.create(id, char, {
+                        width: 100, height: 100, padding: 5,
+                        showOutline: showOutlineOption,
+                        strokeColor: '#1e293b',
+                        outlineColor: '#cbd5e1',
+                        drawingColor: '#4f46e5',
+                        strokeAnimationSpeed: 0.8,
+                        delayBetweenStrokes: 250
+                    });
+                    writers.push(writer);
+                } else {
+                    box.innerText = char;
+                    box.style.fontSize = '3rem';
+                    box.style.lineHeight = '100px';
+                }
+            } catch (e) {
+                console.error("HanziWriter init error:", e);
+                box.innerText = char;
+            }
         }
     }
 
@@ -1279,34 +1288,36 @@
 
         document.getElementById('modal-step-info').innerText = `Дасгал: ${charIndex + 1} / ${wordCharText.length} (${singleChar})`;
 
-        bigModalWriter = HanziWriter.create('big-modal-target', singleChar, {
-            width: 270,
-            height: 270,
-            padding: 10,
-            showOutline: isGuideEnabled,
-            strokeColor: '#4f46e5',
-            outlineColor: isGuideEnabled ? '#cbd5e1' : '#ffffff', 
-            drawingColor: '#059669',
-            drawingWidth: 16,
-            showCharacter: false
-        });
+        if (window.HanziWriter) {
+            bigModalWriter = HanziWriter.create('big-modal-target', singleChar, {
+                width: 270,
+                height: 270,
+                padding: 10,
+                showOutline: isGuideEnabled,
+                strokeColor: '#4f46e5',
+                outlineColor: isGuideEnabled ? '#cbd5e1' : '#ffffff', 
+                drawingColor: '#059669',
+                drawingWidth: 16,
+                showCharacter: false
+            });
 
-        bigModalWriter.quiz({
-            showHintAfterMisses: isGuideEnabled ? 2 : 0,
-            highlightOnMistake: isGuideEnabled,
-            strokeFadeDuration: 200,
-            onComplete: function() {
-                setTimeout(() => {
-                    if (currentModalCharIndex < wordCharText.length - 1) {
-                        currentModalCharIndex++;
-                        loadModalCharacter(currentModalCharIndex);
-                    } else {
-                        alert("🎉 Баяр хүргэе! Энэ үгийн бүх ханзыг зөв бичиж дуусгалаа.");
-                        closePracticeModal();
-                    }
-                }, 400);
-            }
-        });
+            bigModalWriter.quiz({
+                showHintAfterMisses: isGuideEnabled ? 2 : 0,
+                highlightOnMistake: isGuideEnabled,
+                strokeFadeDuration: 200,
+                onComplete: function() {
+                    setTimeout(() => {
+                        if (currentModalCharIndex < wordCharText.length - 1) {
+                            currentModalCharIndex++;
+                            loadModalCharacter(currentModalCharIndex);
+                        } else {
+                            alert("🎉 Баяр хүргэе! Энэ үгийн бүх ханзыг зөв бичиж дуусгалаа.");
+                            closePracticeModal();
+                        }
+                    }, 400);
+                }
+            });
+        }
     }
 
     function resetModalWriter() {
