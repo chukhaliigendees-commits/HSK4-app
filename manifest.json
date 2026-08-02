@@ -1,0 +1,15 @@
+{
+  "short_name": "HSK 4",
+  "name": "Цээжлэх амархан HSK 4",
+  "icons": [
+    {
+      "src": "icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#4f46e5",
+  "theme_color": "#4f46e5",
+  "display": "standalone"
+}
