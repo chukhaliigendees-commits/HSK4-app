@@ -1072,7 +1072,6 @@
         }
     }
 
-    /* 📌 ҮГ АЧААЛАХ ЛОГИК (ГАРЦААГҮЙ ШИНЭЧЛЭХ ЗАСВАР) */
     function loadWord(index) {
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
@@ -1138,34 +1137,30 @@
         showQuizQuestion();
     }
 
-    /* 🎯 ШАЛГАЛТАД ТЭНЦВЭЛ 16 ДАХЬ ҮГ РҮҮ ШУУД ШИЛЖИХ ЖИНХЭНЭ ЗАСВАР */
+    /* 🎯 ТЕСТИЙН ДАРААХ ШИЛЖИЛТИЙГ АЛДААГҮЙ БОЛГОСОН ЛОГИК */
     function showQuizQuestion() {
         if (currentQuizIndex >= quizQuestions.length) {
             const total = quizQuestions.length;
             
             if ((score / total) >= 0.8) {
-                // ДАРААГИЙН БАГЦ РУУ ШИЛЖҮҮЛЭХ
-                const nextIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
-
-                if (nextIndex < activeWordsList.length) {
-                    globalIndex = nextIndex; // 15 байсан бол 16 болгоно
-                    alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг амжилттай давлаа. Дараагийн хэсгийн (${globalIndex + 1}-ээс эхлэх) үгс нээгдлээ!`);
-                } else {
-                    globalIndex = activeWordsList.length - 1;
-                    alert("👏 Баяр хүргэе! Та бэлэн байгаа бүх үгийг сурч дууслаа.");
-                }
-
+                alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, энэ хэсгийн шалгалтыг давлаа.`);
+                
                 document.getElementById('quiz-content').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
+
+                // Цааш үргэлжлэх үг байгаа эсэхийг шалгах
+                if (globalIndex < activeWordsList.length - 1) {
+                    globalIndex++; // Шууд дараагийн үг рүү шилжинэ
+                } else {
+                    globalIndex = 0; // Үг дууссан бол эхнээс нь эхлүүлнэ
+                }
                 
-                // ДЭЛГЭЦИЙН ҮГИЙГ ШИНЭЧЛЭХ
                 loadWord(globalIndex);
 
             } else {
                 alert(`❌ Өө! Та ${total} асуултаас ${score} авлаа. Дараагийн багц руу шилжихийн тулд 80%-иас дээш сайн хариулах шаардлагатай. Дахин оролдоно уу.`);
                 document.getElementById('quiz-content').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
-                // Тэнцээгүй бол өмнөх багцын сүүлийн үг дээр үлдэнэ
                 loadWord(globalIndex);
             }
             return;
@@ -1198,7 +1193,7 @@
         });
     }
 
-    /* 🔊 ЗӨВ ХАРИУЛАХАД ҮГИЙГ ТОД ЧАНГА ХЭЛЖ СОНСГОДОГ БОЛГОЛОО */
+    /* 🔊 ЗӨВ ХАРИУЛАХАД ҮГИЙГ ТОД ЧАНГА ХЭЛЖ СОНСГОНО */
     function handleAnswer(isCorrect, btnElement, chineseChar) {
         const allBtns = document.querySelectorAll('.quiz-option-btn');
         allBtns.forEach(b => b.style.pointerEvents = 'none');
@@ -1206,7 +1201,6 @@
         if (isCorrect) {
             score++;
             btnElement.classList.add('correct');
-            // ЗӨВ ХАРИУЛМАГЦ ХЯТАД ДУУДЛАГЫГ УНШИНА!
             playTTS(chineseChar);
         } else {
             btnElement.classList.add('wrong');
@@ -1215,7 +1209,7 @@
         setTimeout(() => {
             currentQuizIndex++;
             showQuizQuestion();
-        }, 1000); // 1 секунд байлгаж дууг нь гүйцэд сонсгоно
+        }, 1000);
     }
 
     function toggleInfo() {
