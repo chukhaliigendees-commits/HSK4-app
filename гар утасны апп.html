@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Цээжлэх амархан HSK 4</title>
+
+    <!-- Web App (PWA) болон Утасны тохиргоо -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- Supabase JS SDK & Hanzi Writer SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --success: #059669;
+            --warning: #d97706;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .app-card {
+            background: var(--card-bg);
+            padding: 24px 16px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            max-width: 480px;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            position: relative;
+        }
+
+        .top-tools {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 6px;
+        }
+
+        .streak-badge {
+            background: #fff7ed;
+            color: #ea580c;
+            border: 1px solid #ffedd5;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .tool-btn {
+            background: #f1f5f9;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .fav-filter-btn {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fde68a;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .user-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+        }
+
+        .user-status {
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+        .vip-badge { background: #fef3c7; color: #d97706; }
+        .free-badge { background: #e2e8f0; color: #64748b; }
+
+        .badge {
+            background-color: #e0e7ff;
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+
+        .app-title {
+            font-size: 1.4rem;
+            color: #1f2937;
+            margin: 0 0 14px 0;
+            font-weight: 800;
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: #e5e7eb;
+            border-radius: 10px;
+            height: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .global-progress-text {
+            font-size: 0.78rem;
+            color: #64748b;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .word-header {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .star-btn {
+            position: absolute;
+            right: 10px;
+            top: 0;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .pinyin {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 2px;
+            transition: opacity 0.3s ease;
+        }
+
+        .translation {
+            font-size: 1.05rem;
+            color: #4b5563;
+            margin-bottom: 16px;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .hanzi-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            min-height: 110px;
+            flex-wrap: wrap;
+        }
+
+        .character-box {
+            border: 2px dashed #cbd5e1;
+            border-radius: 14px;
+            background: #fafafa;
+            width: 105px;
+            height: 105px;
+            transition: all 0.2s ease;
+            touch-action: none;
+        }
+
+        .character-box.active-box {
+            border-color: var(--primary);
+            background: #f0fdf4;
+            box-shadow: 0 0 12px rgba(79, 70, 229, 0.25);
+        }
+
+        .example-box {
+            background-color: #f8fafc;
+            border-left: 4px solid #f59e0b;
+            padding: 10px 14px;
+            border-radius: 0 12px 12px 0;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .example-title {
+            font-size: 0.75rem;
+            color: #d97706;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .example-cn { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+        .example-pinyin { font-size: 0.82rem; color: #6366f1; margin-bottom: 4px; }
+        .example-mn { font-size: 0.82rem; color: #475569; }
+
+        .btn-grid {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.82rem;
+        }
+        button:active { transform: scale(0.95); }
+
+        .btn-sound { background-color: #0ea5e9; color: white; }
+        .btn-toggle { background-color: #64748b; color: white; }
+        .btn-draw { background-color: #059669; color: white; }
+        .btn-practice { background-color: #8b5cf6; color: white; }
+        .btn-speak { background-color: #10b981; color: white; }
+
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .btn-nav { background-color: #4f46e5; color: white; padding: 8px 16px; }
+        .btn-nav:disabled { background-color: #cbd5e1; cursor: not-allowed; }
+
+        .counter { font-weight: 700; color: #334155; }
+
+        .hidden { display: none !important; }
+
+        .auth-container { display: flex; flex-direction: column; gap: 10px; }
+        .auth-input { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 0.9rem; }
+
+        .quiz-card { display: flex; flex-direction: column; align-items: center; }
+        .quiz-options { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 16px; }
+        
+        .quiz-option-btn {
+            background: #f8fafc;
+            color: #1e293b;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: 2px solid #e2e8f0;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+        .quiz-option-btn:hover { border-color: var(--primary); background: #f0fdf4; }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white; padding: 18px; border-radius: 20px; width: 90%; max-width: 420px; text-align: left;
+            box-sizing: border-box;
+        }
+        .music-item {
+            padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 6px; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 0.88rem;
+        }
+        .play-btn-icon {
+            background: #4f46e5; color: white; width: 26px; height: 26px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+
+<audio id="bg-music" loop></audio>
+
+<div class="app-card">
+    <div class="top-tools">
+        <div id="streak-count" class="streak-badge">🔥 1 өдрийн цуврал</div>
+        <button id="fav-toggle" onclick="toggleFavOnly()" class="fav-filter-btn">⭐ Одтой үгс (0)</button>
+        <button id="music-toggle" onclick="openMusicModal()" class="tool-btn">🎵 Аялгуу сонгох</button>
+    </div>
+
+    <div id="user-bar" class="user-bar hidden">
+        <div>
+            <span id="user-email-text" style="font-weight: 600; color: #374151;"></span>
+            <span id="user-vip-status" class="user-status free-badge">FREE</span>
+        </div>
+        <button onclick="handleLogout()" style="background: #ef4444; color: white; padding: 4px 10px; font-size: 0.75rem;">Гарах</button>
+    </div>
+
+    <div id="auth-box" class="auth-container">
+        <h3>Нэвтрэх</h3>
+        <input type="email" id="auth-email" class="auth-input" placeholder="Имэйл хаяг">
+        <input type="password" id="auth-password" class="auth-input" placeholder="Нууц үг">
+        <button onclick="handleLogin()" style="background: var(--primary); color: white;">Нэвтрэх</button>
+        <button onclick="handleSignUp()" style="background: var(--success); color: white;">Бүртгүүлэх</button>
+    </div>
+
+    <div id="app-content" class="hidden">
+        <span class="badge">HSK 4 VOCABULARY</span>
+        <h1 class="app-title">Цээжлэх амархан HSK 4</h1>
+
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <div class="global-progress-text">
+            Нийт сурсан: <span id="global-counter" style="color: var(--primary); font-weight: 800;">1</span> / <span id="total-words-limit">600</span> үг
+        </div>
+
+        <div class="word-header">
+            <button id="star-btn" onclick="toggleFavorite()" class="star-btn">☆</button>
+            <div id="pinyin" class="pinyin">ài qíng</div>
+            <div id="translation" class="translation">Хайр дурлал</div>
+        </div>
+
+        <div id="hanzi-container" class="hanzi-container" onclick="handleHanziClick()"></div>
+
+        <div class="example-box">
+            <div class="example-title">
+                💡 ЖИШЭЭ ӨГҮҮЛБЭР 
+                <button onclick="speakExample()" class="btn-sound" style="padding: 2px 8px; font-size: 0.7rem;">🔊 Сонсох</button>
+            </div>
+            <div id="example-cn" class="example-cn">...</div>
+            <div id="example-pinyin" class="example-pinyin">...</div>
+            <div id="example-mn" class="example-mn">...</div>
+        </div>
+
+        <div class="btn-grid">
+            <button onclick="speakWord()" class="btn-sound">🔊 Сонсох</button>
+            <button onclick="toggleInfo()" class="btn-toggle">👁 Нуух / Харах</button>
+            <button id="draw-btn" onclick="triggerAnimation()" class="btn-draw">🎨 Зурах</button>
+            <button id="practice-btn" onclick="togglePracticeMode()" class="btn-practice">📝 Дадлага (Заавартай)</button>
+            <button onclick="speakCurrentWord()" class="btn-speak">🎙 Ярих</button>
+        </div>
+
+        <div class="nav-container">
+            <button id="prev-btn" onclick="prevWord()" class="btn-nav">← Өмнөх</button>
+            <span class="counter"><span id="current-index">1</span> / 15</span>
+            <button id="next-btn" onclick="nextWord()" class="btn-nav">Дараах →</button>
+        </div>
+
+        <button onclick="startTest()" style="width: 100%; margin-top: 16px; background: #d97706; color: white;">🎯 Шалгах тест өгөх</button>
+    </div>
+
+    <div id="quiz-content" class="quiz-card hidden">
+        <span class="badge" style="background: #fef3c7; color: #d97706;">HSK 4 QUIZ</span>
+        <h1 class="app-title">Мэдлэгээ Шалгах</h1>
+
+        <div class="progress-container">
+            <div id="quiz-progress-bar" class="progress-bar" style="background-color: var(--warning);"></div>
+        </div>
+
+        <div id="quiz-char" style="font-size: 3.5rem; font-weight: 800; color: #1e293b; margin-bottom: 4px;">-</div>
+        <div id="quiz-pinyin" class="pinyin" style="font-size: 1.4rem;">-</div>
+
+        <div id="quiz-options" class="quiz-options"></div>
+
+        <div class="counter" style="margin-top: 16px;">
+            Асуулт: <span id="quiz-progress">1</span> / 15
+        </div>
+    </div>
+</div>
+
+<!-- 🎵 АЯЛГУУ СОНГОХ ЦОНХ -->
+<div id="music-modal" class="modal hidden">
+    <div class="modal-content">
+        <h3 style="margin-top:0; margin-bottom:12px;">🎵 Төвлөрөх аялгуу сонгох</h3>
+        
+        <div class="music-item" onclick="handleAudioClick('rain', '🌧 Нам гүм борооны чимээ', this)">
+            <span>🌧 Нам гүм борооны чимээ</span>
+            <span class="play-btn-icon">▶</span>
+        </div>
+        <div class="music-item" onclick="handleAudioClick('waves', '🌊 Усны урсгал / Далай', this)">
+            <span>🌊 Усны урсгал / Далай</span>
+            <span class="play-btn-icon">▶</span>
+        </div>
+        <div class="music-item" onclick="handleAudioClick('piano', '🎹 Зөөлөн Пиано аялгуу', this)">
+            <span>🎹 Зөөлөн Пиано аялгуу</span>
+            <span class="play-btn-icon">▶</span>
+        </div>
+        <div class="music-item" onclick="handleAudioClick('lofi', '🎧 Зөөлөн Lo-Fi аялгуу', this)">
+            <span>🎧 Зөөлөн Lo-Fi аялгуу</span>
+            <span class="play-btn-icon">▶</span>
+        </div>
+        
+        <div id="custom-music-list"></div>
+
+        <hr style="margin: 10px 0; border: none; border-top: 1px solid #e2e8f0;">
+        <label style="font-size:0.8rem; font-weight: bold; color: #475569;">📂 Утаснаас аялгуу оруулах (.mp3):</label>
+        <input type="file" id="local-audio-file" accept="audio/*" onchange="playCustomAudio(event)" style="margin-top: 4px; width: 100%; font-size:0.8rem;">
+
+        <div style="margin-top: 12px; display: flex; justify-content: space-between;">
+            <button onclick="stopMusic()" style="background: #ef4444; color: white;">⏸ Аялгуу зогсоох</button>
+            <button onclick="closeMusicModal()" style="background: #64748b; color: white;">Хаах</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://ybhogkvvgnltvbxhhllv.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InliaG9na3Z2Z25sdHZieGhobGx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNzI5NDksImV4cCI6MjA5OTY0ODk0OX0.UNQioVj0xYVUf-KL79JxjM9W8ulZ1JZ6y76W4ozacX8';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const WORDS_PER_TEST = 15;
+    let isPaidUser = false;
+    let currentUser = null;
+    let globalIndex = 0;
+    let writers = [];
+    let isInfoVisible = true;
+    let practiceState = 'off';
+    let favorites = JSON.parse(localStorage.getItem('hsk4_favorites') || '[]');
+    let activeWordsList = [];
+    let isFavOnlyMode = false;
+    let isAnimating = false;
+
+    // --- 🎵 АУДИО ENGINE ---
+    let audioCtx = null;
+    let activeNodes = [];
+    let currentActiveId = '';
+    let isPlayingAudio = false;
+
+    let quizQuestions = [];
+    let currentQuizIndex = 0;
+    let score = 0;
+
+    const rawWordsData = [
+        { char: "爱情", pinyin: "ài qíng", mn: "Хайр дурлал", ex_cn: "他们的爱情很感人。", ex_py: "Tāmen de àiqíng hěn gǎnrén.", ex_mn: "Тэдний хайр дурлал маш сэтгэл хөдөлгөж байна." },
+        { char: "安排", pinyin: "ān pái", mn: "Төлөвлөх, зохицуулах", ex_cn: "这个安排很好。", ex_py: "Zhège ānpái hěn hǎo.", ex_mn: "Энэ зохион байгуулалт маш сайн байна." },
+        { char: "安全", pinyin: "ān quán", mn: "Аюулгүй", ex_cn: "注意安全。", ex_py: "Zhùyì ānquán.", ex_mn: "Аюулгүй байдалдаа анхаараарай." },
+        { char: "按时", pinyin: "àn shí", mn: "Цагтаа, хугацаандаа", ex_cn: "请按时吃药。", ex_py: "Qǐng ànshí chī yào.", ex_mn: "Эмээ цагт нь уугаарай." },
+        { char: "按照", pinyin: "àn zhào", mn: "Дагуу, дагуулан", ex_cn: "按照要求做。", ex_py: "Ànzhào yāoqiú zuò.", ex_mn: "Шаардлагын дагуу хий." },
+        { char: "百分之", pinyin: "bǎi fēn zhī", mn: "Хувь (%)", ex_cn: "百分之八十的人同意。", ex_py: "Bǎi fēn zhī bāshí de rén tóngyì。", ex_mn: "Хүмүүсийн 80 хувь нь зөвшөөрсөн." },
+        { char: "棒", pinyin: "bàng", mn: "Мундаг, сайн", ex_cn: "你真棒！", ex_py: "Nǐ zhēn bàng!", ex_mn: "Чи үнэхээр мундаг юм!" },
+        { char: "包子", pinyin: "bāo zi", mn: "Бууз", ex_cn: "早上吃包子。", ex_py: "Zǎoshang chī bāozi.", ex_mn: "Өглөө бууз иднэ." },
+        { char: "保护", pinyin: "bǎo hù", mn: "Хамгаалах", ex_cn: "保护环境。", ex_py: "Bǎohù huánjìng.", ex_mn: "Байгаль орчноо хамгаалах." },
+        { char: "保证", pinyin: "bǎo zhèng", mn: "Баталгаажуулах, амлах", ex_cn: "我保证完成任务。", ex_py: "Wǒ bǎozhèng wánchéng rènwu.", ex_mn: "Би даалгавраа биелүүлнэ гэж амлаж байна." },
+        { char: "报名", pinyin: "bào míng", mn: "Бүртгүүлэх", ex_cn: "我想报名参加考试。", ex_py: "Wǒ xiǎng bàomíng cānjiā kǎoshì.", ex_mn: "Би шалгалтад бүртгүүлмээр байна." },
+        { char: "抱", pinyin: "bào", mn: "Тэврэх", ex_cn: "妈妈抱着孩子。", ex_py: "Māma bàozhe háizi.", ex_mn: "Ээж хүүхдээ тэвэрч байна." },
+        { char: "抱歉", pinyin: "bào qiàn", mn: "Уучлаарай, өршөөгөөрэй", ex_cn: "非常抱歉，我迟到了。", ex_py: "Fēicháng bàoqiàn, wǒ chídào le.", ex_mn: "Маш их уучлаарай, би хоцорчихлоо." },
+        { char: "倍", pinyin: "bèi", mn: "Дахин (дахин их)", ex_cn: "收入增加了两倍。", ex_py: "Shōurù zēngjiā le liǎng bèi.", ex_mn: "Орлого хоёр дахин нэмэгдсэн." },
+        { char: "本来", pinyin: "běn lái", mn: "Анхнаасаа, анх", ex_cn: "我本来打算去的。", ex_py: "Wǒ běnlái dǎsuàn qù de.", ex_mn: "Би анхнаасаа явах бодолтой байсан." }
+    ];
+
+    activeWordsList = rawWordsData;
+
+    function openMusicModal() { document.getElementById('music-modal').classList.remove('hidden'); }
+    function closeMusicModal() { document.getElementById('music-modal').classList.add('hidden'); }
+
+    function handleAudioClick(type, title, element) {
+        if (currentActiveId === type && isPlayingAudio) {
+            stopMusic();
+            return;
+        }
+
+        stopMusic();
+
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        currentActiveId = type;
+        isPlayingAudio = true;
+
+        if (type === 'piano' || type === 'lofi') {
+            const notes = type === 'piano' ? [261.63, 329.63, 392.00, 523.25] : [220, 277.18, 329.63, 440];
+            let noteIndex = 0;
+
+            const intervalId = setInterval(() => {
+                if (!isPlayingAudio) { clearInterval(intervalId); return; }
+                
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                
+                osc.type = type === 'piano' ? 'sine' : 'triangle';
+                osc.frequency.setValueAtTime(notes[noteIndex], audioCtx.currentTime);
+                
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 2.5);
+
+                noteIndex = (noteIndex + 1) % notes.length;
+            }, 1200);
+
+            activeNodes.push({ stop: () => clearInterval(intervalId) });
+
+        } else {
+            const bufferSize = audioCtx.sampleRate * 2;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const whiteNoise = audioCtx.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = type === 'rain' ? 600 : 350;
+
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0.08;
+
+            whiteNoise.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            whiteNoise.start();
+            activeNodes.push(whiteNoise);
+        }
+
+        element.querySelector('.play-btn-icon').innerText = '⏸';
+        document.getElementById('music-toggle').innerText = "🔊 " + title;
+        document.getElementById('music-toggle').style.background = "#dcfce7";
+    }
+
+    function playCustomAudio(e) {
+        stopMusic();
+        const file = e.target.files[0];
+        if (file) {
+            const music = document.getElementById('bg-music');
+            music.src = URL.createObjectURL(file);
+            music.play();
+            isPlayingAudio = true;
+            currentActiveId = 'custom';
+
+            const title = "📁 " + file.name.substring(0, 15);
+            document.getElementById('music-toggle').innerText = "🔊 " + title;
+            document.getElementById('music-toggle').style.background = "#dcfce7";
+            closeMusicModal();
+        }
+    }
+
+    function stopMusic() {
+        activeNodes.forEach(node => {
+            try { if (node.stop) node.stop(); } catch(e){}
+        });
+        activeNodes = [];
+
+        const music = document.getElementById('bg-music');
+        music.pause();
+
+        isPlayingAudio = false;
+        currentActiveId = '';
+
+        document.querySelectorAll('.play-btn-icon').forEach(icon => icon.innerText = '▶');
+        document.getElementById('music-toggle').innerText = "🎵 Аялгуу сонгох";
+        document.getElementById('music-toggle').style.background = "#f1f5f9";
+    }
+
+    function updateStreak() {
+        const today = new Date().toDateString();
+        const lastVisit = localStorage.getItem('hsk4_last_date');
+        let streak = parseInt(localStorage.getItem('hsk4_streak') || '1');
+
+        if (lastVisit) {
+            const lastDate = new Date(lastVisit);
+            const diffDays = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24));
+            if (diffDays === 1) streak++;
+            else if (diffDays > 1) streak = 1;
+        }
+
+        localStorage.setItem('hsk4_last_date', today);
+        localStorage.setItem('hsk4_streak', streak);
+        document.getElementById('streak-count').innerText = `🔥 ${streak} өдрийн цуврал`;
+    }
+
+    function toggleFavorite() {
+        const char = activeWordsList[globalIndex].char;
+        if (favorites.includes(char)) {
+            favorites = favorites.filter(c => c !== char);
+        } else {
+            favorites.push(char);
+        }
+        localStorage.setItem('hsk4_favorites', JSON.stringify(favorites));
+        updateStarUI();
+    }
+
+    function updateStarUI() {
+        const char = activeWordsList[globalIndex].char;
+        const starBtn = document.getElementById('star-btn');
+        const favToggleBtn = document.getElementById('fav-toggle');
+        favToggleBtn.innerText = `⭐ Одтой үгс (${favorites.length})`;
+
+        if (favorites.includes(char)) {
+            starBtn.innerText = "⭐";
+            starBtn.style.color = "#f59e0b";
+        } else {
+            starBtn.innerText = "☆";
+            starBtn.style.color = "#94a3b8";
+        }
+    }
+
+    function toggleFavOnly() {
+        if (!isFavOnlyMode) {
+            const favWords = rawWordsData.filter(w => favorites.includes(w.char));
+            if (favWords.length === 0) {
+                alert("Та одоохондоо ямар нэгэн үг ⭐ одоор хадгалаагүй байна!");
+                return;
+            }
+            activeWordsList = favWords;
+            isFavOnlyMode = true;
+            document.getElementById('fav-toggle').style.background = "#f59e0b";
+            document.getElementById('fav-toggle').style.color = "#ffffff";
+        } else {
+            activeWordsList = rawWordsData;
+            isFavOnlyMode = false;
+            document.getElementById('fav-toggle').style.background = "#fef3c7";
+            document.getElementById('fav-toggle').style.color = "#d97706";
+        }
+        globalIndex = 0;
+        loadWord(globalIndex);
+    }
+
+    async function checkUserSubscription(user) {
+        try {
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('subscription_end')
+                .eq('id', user.id)
+                .single();
+
+            const statusElem = document.getElementById('user-vip-status');
+
+            if (profile && profile.subscription_end) {
+                const endDate = new Date(profile.subscription_end);
+                if (endDate > new Date()) {
+                    isPaidUser = true;
+                    statusElem.innerText = "👑 VIP";
+                    statusElem.className = "user-status vip-badge";
+                    document.getElementById('total-words-limit').innerText = "600";
+                    return;
+                }
+            }
+            
+            isPaidUser = false;
+            statusElem.innerText = "FREE";
+            statusElem.className = "user-status free-badge";
+            document.getElementById('total-words-limit').innerText = "15";
+
+        } catch (err) {
+            console.error("Profile шалгахад алдаа:", err);
+            isPaidUser = false;
+        }
+    }
+
+    async function initApp() {
+        updateStreak();
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && session.user) {
+            currentUser = session.user;
+            await checkUserSubscription(currentUser);
+
+            document.getElementById('auth-box').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('quiz-content').classList.add('hidden');
+            document.getElementById('user-bar').classList.remove('hidden');
+            document.getElementById('user-email-text').innerText = currentUser.email;
+
+            loadWord(globalIndex);
+        } else {
+            document.getElementById('auth-box').classList.remove('hidden');
+            document.getElementById('app-content').classList.add('hidden');
+            document.getElementById('quiz-content').classList.add('hidden');
+            document.getElementById('user-bar').classList.add('hidden');
+        }
+    }
+
+    async function handleLogin() {
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-password').value;
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) alert("Алдаа: " + error.message);
+        else initApp();
+    }
+
+    async function handleSignUp() {
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-password').value;
+        const { error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) alert("Алдаа: " + error.message);
+        else alert("Бүртгэл амжилттай! Та нэвтэрч орно уу.");
+    }
+
+    async function handleLogout() {
+        await supabaseClient.auth.signOut();
+        initApp();
+    }
+
+    function renderHanzi(text, showOutlineOption = true) {
+        const container = document.getElementById('hanzi-container');
+        container.innerHTML = '';
+        writers = [];
+
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const box = document.createElement('div');
+            box.className = 'character-box';
+            const id = 'hanzi-box-' + i;
+            box.id = id;
+            container.appendChild(box);
+
+            const writer = HanziWriter.create(id, char, {
+                width: 100, height: 100, padding: 5,
+                showOutline: showOutlineOption,
+                strokeColor: '#1e293b',
+                outlineColor: '#cbd5e1',
+                drawingColor: '#4f46e5',
+                strokeAnimationSpeed: 0.8,
+                delayBetweenStrokes: 250
+            });
+            writers.push(writer);
+        }
+    }
+
+    function loadWord(index) {
+        if(index >= activeWordsList.length) index = activeWordsList.length - 1;
+        if(index < 0) index = 0;
+
+        practiceState = 'off';
+        const pBtn = document.getElementById('practice-btn');
+        pBtn.innerText = "📝 Дадлага (Заавартай)";
+        pBtn.style.background = "#8b5cf6";
+
+        const word = activeWordsList[index];
+        document.getElementById('pinyin').innerText = word.pinyin;
+        document.getElementById('translation').innerText = word.mn;
+        document.getElementById('example-cn').innerText = word.ex_cn;
+        document.getElementById('example-pinyin').innerText = word.ex_py;
+        document.getElementById('example-mn').innerText = word.ex_mn;
+
+        renderHanzi(word.char, true);
+        updateStarUI();
+
+        const positionInBatch = (index % WORDS_PER_TEST) + 1;
+        document.getElementById('current-index').innerText = positionInBatch;
+        document.getElementById('global-counter').innerText = index + 1;
+
+        const progressPercentage = (positionInBatch / WORDS_PER_TEST) * 100;
+        document.getElementById('progress-bar').style.width = progressPercentage + "%";
+
+        document.getElementById('prev-btn').disabled = index === 0;
+    }
+
+    function nextWord() {
+        const currentBatchMaxIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + (WORDS_PER_TEST - 1);
+
+        if (globalIndex === currentBatchMaxIndex && !isFavOnlyMode) {
+            if (!isPaidUser && globalIndex >= 14) {
+                alert("🔒 Үнэгүй эрхийн 15 үг дууслаа. Цааш үргэлжлүүлж 600 үг сурахын тулд VIP эрх авна уу!");
+            } else {
+                alert("🎉 Энэ хэсгийн 15 үг дууслаа! Доорх 'Шалгах тест өгөх' товчийг дарж шалгалтаа өгнө үү.");
+            }
+            return;
+        }
+
+        if (globalIndex < activeWordsList.length - 1) {
+            globalIndex++;
+            loadWord(globalIndex);
+        }
+    }
+
+    function prevWord() {
+        if (globalIndex > 0) {
+            globalIndex--;
+            loadWord(globalIndex);
+        }
+    }
+
+    function startTest() {
+        const batchStart = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST;
+        const batchEnd = Math.min(batchStart + WORDS_PER_TEST, activeWordsList.length);
+        
+        quizQuestions = activeWordsList.slice(batchStart, batchEnd);
+        currentQuizIndex = 0;
+        score = 0;
+
+        document.getElementById('app-content').classList.add('hidden');
+        document.getElementById('quiz-content').classList.remove('hidden');
+
+        showQuizQuestion();
+    }
+
+    function showQuizQuestion() {
+        if (currentQuizIndex >= quizQuestions.length) {
+            const total = quizQuestions.length;
+            
+            if ((score / total) >= 0.8) {
+                alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг амжилттай давлаа.`);
+                
+                document.getElementById('quiz-content').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+
+                globalIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
+                if (globalIndex >= activeWordsList.length) {
+                    globalIndex = activeWordsList.length - 1;
+                    alert("👏 Баяр хүргэе! Та одоогоор бэлэн байгаа бүх үгийг үзэж дууслаа.");
+                }
+                loadWord(globalIndex);
+
+            } else {
+                alert(`❌ Өө! Та ${total} асуултаас ${score} авлаа. Дараагийн багц руу шилжихийн тулд 80%-иас дээш сайн хариулах шаардлагатай. Дахин оролдоно уу.`);
+                document.getElementById('quiz-content').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+            }
+            return;
+        }
+
+        const currentWord = quizQuestions[currentQuizIndex];
+        document.getElementById('quiz-char').innerText = currentWord.char;
+        document.getElementById('quiz-pinyin').innerText = currentWord.pinyin;
+        document.getElementById('quiz-progress').innerText = currentQuizIndex + 1;
+
+        const progressPercentage = ((currentQuizIndex + 1) / quizQuestions.length) * 100;
+        document.getElementById('quiz-progress-bar').style.width = progressPercentage + "%";
+
+        let options = [currentWord.mn];
+        while (options.length < 3 && options.length < rawWordsData.length) {
+            let randomWord = rawWordsData[Math.floor(Math.random() * rawWordsData.length)].mn;
+            if (!options.includes(randomWord)) options.push(randomWord);
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        const optionsContainer = document.getElementById('quiz-options');
+        optionsContainer.innerHTML = '';
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'quiz-option-btn';
+            btn.innerText = opt;
+            btn.onclick = (e) => handleAnswer(opt === currentWord.mn, e.target);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function handleAnswer(isCorrect, btnElement) {
+        const allBtns = document.querySelectorAll('.quiz-option-btn');
+        allBtns.forEach(b => b.style.pointerEvents = 'none');
+
+        if (isCorrect) {
+            score++;
+            btnElement.classList.add('correct');
+        } else {
+            btnElement.classList.add('wrong');
+        }
+
+        setTimeout(() => {
+            currentQuizIndex++;
+            showQuizQuestion();
+        }, 600);
+    }
+
+    function playTTS(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'zh-CN';
+        msg.rate = 0.85;
+
+        const voices = window.speechSynthesis.getVoices();
+        const bestVoice = voices.find(v => v.lang.includes('zh') && (
+            v.name.includes('Natural') || 
+            v.name.includes('Google') || 
+            v.name.includes('Xiaoxiao') || 
+            v.name.includes('Yunxi')
+        ));
+
+        if (bestVoice) msg.voice = bestVoice;
+        window.speechSynthesis.speak(msg);
+    }
+
+    function speakWord() {
+        playTTS(activeWordsList[globalIndex].char);
+    }
+
+    function speakExample() {
+        playTTS(activeWordsList[globalIndex].ex_cn);
+    }
+
+    function toggleInfo() {
+        isInfoVisible = !isInfoVisible;
+        const opacity = isInfoVisible ? '1' : '0';
+        document.getElementById('pinyin').style.opacity = opacity;
+        document.getElementById('translation').style.opacity = opacity;
+    }
+
+    // --- 🎨 ЗҮҮНЭЭС БАРУУН РУУ ДАРААЛЖ ЗУРАХ АНИМАЦИ ---
+    async function animateSingleWriter(writer) {
+        return new Promise((resolve) => {
+            writer.showCharacter();
+            writer.animateCharacter({
+                strokeAnimationSpeed: 0.8,
+                onComplete: resolve
+            });
+        });
+    }
+
+    async function triggerAnimation() {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        renderHanzi(activeWordsList[globalIndex].char, true);
+
+        for (let i = 0; i < writers.length; i++) {
+            await animateSingleWriter(writers[i]);
+        }
+
+        isAnimating = false;
+    }
+
+    function handleHanziClick() {
+        if (!isAnimating && practiceState === 'off') {
+            triggerAnimation();
+        }
+    }
+
+    // --- 📝 ДАДЛАГА (QUIZ) БҮРЭН ХАР ХАНЗ ТОДОРЧ ДУУСАХЫГ ХҮЛЭЭХ ТӨЛӨВ ---
+    function togglePracticeMode() {
+        const pBtn = document.getElementById('practice-btn');
+
+        if (practiceState === 'off') {
+            practiceState = 'guided';
+            pBtn.innerText = "📝 Дадлага (👁 Бүдэг заавартай)";
+            pBtn.style.background = "#8b5cf6";
+            startInteractivePractice(true);
+        } else if (practiceState === 'guided') {
+            practiceState = 'blind';
+            pBtn.innerText = "📝 Дадлага (🙈 Зааваргүй шалгалт)";
+            pBtn.style.background = "#d97706";
+            startInteractivePractice(false);
+        } else {
+            practiceState = 'off';
+            pBtn.innerText = "📝 Дадлага (Заавартай)";
+            pBtn.style.background = "#8b5cf6";
+            renderHanzi(activeWordsList[globalIndex].char, true);
+        }
+    }
+
+    function startInteractivePractice(showGuide) {
+        renderHanzi(activeWordsList[globalIndex].char, showGuide);
+        let currentIdx = 0;
+
+        function highlightBox(index) {
+            document.querySelectorAll('.character-box').forEach((b, idx) => {
+                if (idx === index) b.classList.add('active-box');
+                else b.classList.remove('active-box');
+            });
+        }
+
+        function runQuizForChar(index) {
+            if (index >= writers.length) {
+                document.querySelectorAll('.character-box').forEach(b => b.classList.remove('active-box'));
+                
+                // 🛠️ СҮҮЛЧИЙН ЗУРЛАГ ГҮЙЦЭД ТОДОРЧ, ХАР ӨНГӨТЭЙ БОЛОХЫГ 0.5 СЕКУНД ХҮЛЭЭЖ ИЛГЭЭХ
+                setTimeout(() => {
+                    alert("🎉 Баяр хүргэе! Ханзыг дарааллын дагуу зөв бичиж дуусгалаа.");
+                }, 500);
+                
+                return;
+            }
+
+            highlightBox(index);
+
+            writers[index].quiz({
+                showHintAfterMisses: false,
+                highlightOnMistake: false,
+                strokeFadeDuration: 200,
+                onComplete: function() {
+                    runQuizForChar(index + 1);
+                }
+            });
+        }
+
+        runQuizForChar(currentIdx);
+    }
+
+    function speakCurrentWord() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert("Уучлаарай, таны браузер микрофон таних боломжгүй байна. Chrome эсвэл Edge ашиглана уу.");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'zh-CN';
+        recognition.interimResults = false;
+
+        alert("🎙 Та одоо микрофон руугаа үгийг хэлээрэй...");
+        recognition.start();
+
+        recognition.onresult = (event) => {
+            const spokenText = event.results[0][0].transcript;
+            const targetWord = activeWordsList[globalIndex].char;
+
+            if (spokenText.includes(targetWord) || targetWord.includes(spokenText)) {
+                alert(`✅ Маш сайн! Зөв дуудлаа: "${spokenText}"`);
+            } else {
+                alert(`❌ Буруу дуудлаа. Та "${spokenText}" гэж хэллээ. Зөв дуудлага: "${targetWord}"`);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            alert("Дуу хоолойг танихад алдаа гарлаа: " + event.error);
+        };
+    }
+
+    window.onload = initApp;
+</script>
+</body>
+</html>
