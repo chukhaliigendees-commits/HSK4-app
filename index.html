@@ -286,7 +286,6 @@
 
         .hidden { display: none !important; }
 
-        /* 🎨 НЭВТРЭХ ХЭСГИЙН HERO ДИЗАЙН */
         .auth-container { 
             display: flex; 
             flex-direction: column; 
@@ -371,7 +370,6 @@
             font-weight: 600;
         }
 
-        /* 🎯 QUIZ STYLES (ЗӨВ / БУРУУ ӨНГӨ) */
         .quiz-card { display: flex; flex-direction: column; align-items: center; }
         .quiz-options { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 16px; }
         
@@ -652,7 +650,7 @@
     let currentQuizIndex = 0;
     let score = 0;
 
-    /* 🌐 SUPABASE ДАТАБЭЙСЭЭС 600 ҮГЭЭ ТАТАХ ФУНКЦ */
+    /* 🌐 SUPABASE-ЭЭС 600 ҮГЭЭ БҮРЭН ТАТАХ ФУНКЦ */
     async function fetchAllWordsFromSupabase() {
         try {
             const { data, error } = await supabaseClient
@@ -683,6 +681,7 @@
         return false;
     }
 
+    /* 🎙 ГОЁ, ЦЭВЭРХЭН, ТУНГАЛАГ ХОЛООГ СОНГОН СЭРГЭЭСЭН АУДИО ФУНКЦ */
     function loadVoices() {
         if ('speechSynthesis' in window) {
             availableVoices = window.speechSynthesis.getVoices();
@@ -707,12 +706,12 @@
         }
 
         const bestVoice = availableVoices.find(v => v.lang.includes('zh') && (
-            v.name.includes('Tingting') || 
-            v.name.includes('Sinji') ||
+            v.name.includes('Natural') ||
             v.name.includes('Xiaoxiao') ||
+            v.name.includes('Sinji') ||
+            v.name.includes('Tingting') || 
             v.name.includes('Mei-Jia') ||
-            v.name.includes('Google 普通话') ||
-            v.name.includes('Natural')
+            v.name.includes('Google 普通话')
         )) || availableVoices.find(v => v.lang.includes('zh'));
 
         if (bestVoice) msg.voice = bestVoice;
@@ -1016,7 +1015,7 @@
     async function initApp() {
         updateStreak();
 
-        // 🌐 Supabase-ээс 600 үгийг эхлээд ачаалж оруулна
+        // Supabase-ээс 600 үгийг эхэлж татна
         await fetchAllWordsFromSupabase();
 
         const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1069,7 +1068,7 @@
         container.innerHTML = '';
         writers = [];
 
-        if(!text) return;
+        if (!text) return;
 
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
@@ -1159,7 +1158,7 @@
         showQuizQuestion();
     }
 
-    /* 🎯 ТЕСТИЙН ДАРАА ХАМГИЙН ТОД ЗАСРАСАН ШИЛЖИХ ЛОГИК */
+    /* 🎯 16 ДАХЬ ҮГ РҮҮ ШУУД ҮСРЭХ ДҮҮРЭН ЗАСВАР */
     function showQuizQuestion() {
         if (currentQuizIndex >= quizQuestions.length) {
             const total = quizQuestions.length;
@@ -1168,11 +1167,11 @@
                 document.getElementById('quiz-content').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
 
-                // Одоо байгаа багцын дараагийн 16, 31, 46 дахь индекс рүү шууд үсрэх
-                const nextBatchIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
+                // Одоо байгаа багцын төгсгөл + 1 буюу 16, 31, 46 дахь индекс рүү шууд шилжинэ
+                const nextBatchStartIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
 
-                if (nextBatchIndex < activeWordsList.length) {
-                    globalIndex = nextBatchIndex;
+                if (nextBatchStartIndex < activeWordsList.length) {
+                    globalIndex = nextBatchStartIndex; // Яг 16 дахь үг рүү шилжүүлнэ
                     alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг давлаа. Дараагийн багц (${globalIndex + 1}-ээс эхлэх) нээгдлээ!`);
                 } else {
                     globalIndex = 0;
