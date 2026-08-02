@@ -625,7 +625,7 @@
     let isPaidUser = false;
     let currentUser = null;
     
-    // 💡 Хэрэглэгч хамгийн сүүлд ямар үг дээр зогссоныг санах
+    // 💡 Хамгийн сүүлд зогссон үгийг LocalStorage-оос унших
     let globalIndex = parseInt(localStorage.getItem('hsk4_last_index') || '0');
     let savedGlobalIndex = globalIndex;
     
@@ -687,7 +687,6 @@
         return false;
     }
 
-    /* 🎙 ЦЭВЭР, НАРИЙНХАН ЭМЭГТЭЙ МАНДАРИН ХООЛОЙ */
     function loadVoices() {
         if ('speechSynthesis' in window) {
             availableVoices = window.speechSynthesis.getVoices();
@@ -967,6 +966,7 @@
         loadWord(globalIndex);
     }
 
+    // 🔒 НЭГ БҮРТГЭЛЭЭР ОЛОН ТӨХӨӨРӨМЖИЙГ ХОРИГЛОХ ЛОГИК
     async function checkAndLockSession(user, session) {
         if (!user || !session) return true;
         const currentToken = session.access_token.slice(-20);
@@ -979,7 +979,7 @@
                 .single();
 
             if (profile && profile.current_session_id && profile.current_session_id !== currentToken) {
-                alert("🔒 Таны данс өөр төхөөрөмж дээр нэвтэрсэн тул энэ төхөөрөмжөөс салгагдлаа!");
+                alert("🔒 Таны дансаар өөр төхөөрөмж дээр нэвтэрсэн тул энэ төхөөрөмжөөс салгагдлаа!");
                 await supabaseClient.auth.signOut();
                 initApp();
                 return false;
@@ -988,11 +988,10 @@
             if (!profile || profile.current_session_id !== currentToken) {
                 await supabaseClient
                     .from('profiles')
-                    .update({ current_session_id: currentToken })
-                    .eq('id', user.id);
+                    .upsert({ id: user.id, current_session_id: currentToken });
             }
         } catch (err) {
-            console.error("Session lock error:", err);
+            console.error("Session check error:", err);
         }
         return true;
     }
@@ -1024,7 +1023,7 @@
             document.getElementById('total-words-limit').innerText = "600";
 
         } catch (err) {
-            console.error("Profile шалгахад алдаа:", err);
+            console.error("Profile check error:", err);
             isPaidUser = true;
             document.getElementById('total-words-limit').innerText = "600";
         }
@@ -1061,9 +1060,20 @@
     async function handleLogin() {
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-password').value;
-        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) alert("Алдаа: " + error.message);
-        else initApp();
+        
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        
+        if (error) {
+            alert("Алдаа: " + error.message);
+        } else if (data && data.session) {
+            // Шинээр нэвтрэх бүрд тухайн төхөөрөмжийн сессийн ID-г DB-д шинэчилнэ
+            const newToken = data.session.access_token.slice(-20);
+            await supabaseClient
+                .from('profiles')
+                .upsert({ id: data.user.id, current_session_id: newToken });
+
+            initApp();
+        }
     }
 
     async function handleSignUp() {
@@ -1112,7 +1122,7 @@
                     box.style.lineHeight = '100px';
                 }
             } catch (e) {
-                console.error("HanziWriter init error:", e);
+                console.error("HanziWriter error:", e);
                 box.innerText = char;
             }
         }
@@ -1124,7 +1134,7 @@
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
 
-        // 💡 Үндсэн 600 үгийн горимд байх үед сүүлчийн зогссон индексийг утсанд байнга хадгална!
+        // Үндсэн горимд явж байх үед сүүлчийн индексийг утсанд хадгална
         if (!isFavOnlyMode) {
             localStorage.setItem('hsk4_last_index', index);
         }
@@ -1322,6 +1332,7 @@
     }
 
     function closePracticeModal() {
+        document.getElementById('big-practice-modal').classList.hidden = true;
         document.getElementById('big-practice-modal').classList.add('hidden');
         document.body.classList.remove('modal-active');
     }
