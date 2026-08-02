@@ -625,9 +625,8 @@
     let isPaidUser = false;
     let currentUser = null;
     
-    // 💡 Хамгийн сүүлд зогссон үгийг LocalStorage-оос унших
-    let globalIndex = parseInt(localStorage.getItem('hsk4_last_index') || '0');
-    let savedGlobalIndex = globalIndex;
+    let globalIndex = 0;
+    let savedGlobalIndex = 0;
     
     let writers = [];
     let isInfoVisible = true;
@@ -966,7 +965,7 @@
         loadWord(globalIndex);
     }
 
-    // 🔒 НЭГ БҮРТГЭЛЭЭР ОЛОН ТӨХӨӨРӨМЖИЙГ ХОРИГЛОХ ЛОГИК
+    // 🔒 НЭГ БҮРТГЭЛЭЭР ОЛОН ТӨХӨӨРӨМЖИЙГ ХОРИГЛОХ БА СЕССИЙГ БАЙНГЫН ШАЛГАХ
     async function checkAndLockSession(user, session) {
         if (!user || !session) return true;
         const currentToken = session.access_token.slice(-20);
@@ -974,21 +973,28 @@
         try {
             const { data: profile } = await supabaseClient
                 .from('profiles')
-                .select('current_session_id')
+                .select('current_session_id, user_index')
                 .eq('id', user.id)
                 .single();
 
-            if (profile && profile.current_session_id && profile.current_session_id !== currentToken) {
-                alert("🔒 Таны дансаар өөр төхөөрөмж дээр нэвтэрсэн тул энэ төхөөрөмжөөс салгагдлаа!");
-                await supabaseClient.auth.signOut();
-                initApp();
-                return false;
-            }
+            if (profile) {
+                // Өөр төхөөрөмж дээр нэвтэрсэн эсэхийг шалгах
+                if (profile.current_session_id && profile.current_session_id !== currentToken) {
+                    alert("🔒 Таны дансаар өөр төхөөрөмж дээр нэвтэрсэн тул энэ төхөөрөмжөөс салгагдлаа!");
+                    await supabaseClient.auth.signOut();
+                    window.location.reload();
+                    return false;
+                }
 
-            if (!profile || profile.current_session_id !== currentToken) {
+                // Онлайн датабэйсээс сүүлчийн индексийг унших
+                if (profile.user_index !== undefined && profile.user_index !== null) {
+                    globalIndex = parseInt(profile.user_index);
+                }
+            } else {
+                // Шинэ профиль үүсгэх
                 await supabaseClient
                     .from('profiles')
-                    .upsert({ id: user.id, current_session_id: currentToken });
+                    .insert([{ id: user.id, current_session_id: currentToken, user_index: 0 }]);
             }
         } catch (err) {
             console.error("Session check error:", err);
@@ -996,36 +1002,28 @@
         return true;
     }
 
+    // SUPABASE ДЭЭР ҮГИЙН ИНДЕКСИЙГ ХАДГАЛАХ
+    async function saveUserProgress(index) {
+        if (!currentUser || isFavOnlyMode) return;
+        try {
+            await supabaseClient
+                .from('profiles')
+                .update({ user_index: index })
+                .eq('id', currentUser.id);
+        } catch(e) {
+            console.error("Progress save error:", e);
+        }
+    }
+
     async function checkUserSubscription(user) {
         try {
-            const { data: profile } = await supabaseClient
-                .from('profiles')
-                .select('subscription_end')
-                .eq('id', user.id)
-                .single();
-
             const statusElem = document.getElementById('user-vip-status');
-
-            if (profile && profile.subscription_end) {
-                const endDate = new Date(profile.subscription_end);
-                if (endDate > new Date()) {
-                    isPaidUser = true;
-                    statusElem.innerText = "👑 VIP";
-                    statusElem.className = "user-status vip-badge";
-                    document.getElementById('total-words-limit').innerText = "600";
-                    return;
-                }
-            }
-            
             isPaidUser = true;
             statusElem.innerText = "👑 VIP";
             statusElem.className = "user-status vip-badge";
             document.getElementById('total-words-limit').innerText = "600";
-
         } catch (err) {
             console.error("Profile check error:", err);
-            isPaidUser = true;
-            document.getElementById('total-words-limit').innerText = "600";
         }
     }
 
@@ -1066,8 +1064,9 @@
         if (error) {
             alert("Алдаа: " + error.message);
         } else if (data && data.session) {
-            // Шинээр нэвтрэх бүрд тухайн төхөөрөмжийн сессийн ID-г DB-д шинэчилнэ
             const newToken = data.session.access_token.slice(-20);
+            
+            // Шинэ төхөөрөмж нэвтрэхэд Сессийн ID-г DB дээр шууд солино
             await supabaseClient
                 .from('profiles')
                 .upsert({ id: data.user.id, current_session_id: newToken });
@@ -1128,15 +1127,22 @@
         }
     }
 
-    function loadWord(index) {
+    async function loadWord(index) {
         if(!activeWordsList || activeWordsList.length === 0) return;
+
+        // Өөр төхөөрөмж нэвтэрсэн үү гэдгийг дарах болгонд шалгах
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && currentUser) {
+            const isOk = await checkAndLockSession(currentUser, session);
+            if (!isOk) return;
+        }
 
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
 
-        // Үндсэн горимд явж байх үед сүүлчийн индексийг утсанд хадгална
+        // Үндсэн горимд явж байх үед сүүлчийн индексийг датабэйст хадгална
         if (!isFavOnlyMode) {
-            localStorage.setItem('hsk4_last_index', index);
+            saveUserProgress(index);
         }
 
         document.getElementById('voice-feedback-box').classList.add('hidden');
@@ -1332,7 +1338,6 @@
     }
 
     function closePracticeModal() {
-        document.getElementById('big-practice-modal').classList.hidden = true;
         document.getElementById('big-practice-modal').classList.add('hidden');
         document.body.classList.remove('modal-active');
     }
