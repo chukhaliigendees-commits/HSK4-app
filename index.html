@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HSK 4</title>
+    <title>HSK 4 Master</title>
 
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -472,6 +472,7 @@
         <button onclick="handleSignUp()" style="background: var(--success); color: white; padding: 12px; font-size: 0.95rem; border-radius: 12px;">Шинээр бүртгүүлэх</button>
     </div>
 
+    <!-- 📚 ҮНДСЭН АПП ХЭСЭГ -->
     <div id="app-content" class="hidden">
         <span class="badge">HSK 4 VOCABULARY</span>
         <h1 class="app-title">Цээжлэх амархан HSK 4</h1>
@@ -485,7 +486,7 @@
 
         <div class="word-header">
             <button id="star-btn" onclick="toggleFavorite()" class="star-btn">☆</button>
-            <div id="pinyin" class="pinyin">ài qíng</div>
+            <div id="pinyin" class="pinyin">à iqíng</div>
             <div id="translation" class="translation">Хайр дурлал</div>
         </div>
 
@@ -526,6 +527,7 @@
         <button onclick="startTest()" style="width: 100%; margin-top: 14px; background: #d97706; color: white;">🎯 Шалгах тест өгөх</button>
     </div>
 
+    <!-- 🎯 ШАЛГАЛТЫН ХЭСЭГ -->
     <div id="quiz-content" class="quiz-card hidden">
         <span class="badge" style="background: #fef3c7; color: #d97706;">HSK 4 QUIZ</span>
         <h1 class="app-title">Мэдлэгээ Шалгах</h1>
@@ -547,6 +549,7 @@
     <div></div>
 </div>
 
+<!-- 🎨 ХАНЗ БИЧИХ МОДАЛ -->
 <div id="big-practice-modal" class="modal hidden">
     <div class="modal-content" style="background: #1e293b; color: white; text-align: center; border-radius: 28px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -568,6 +571,7 @@
     </div>
 </div>
 
+<!-- 🔑 НУУЦ ҮГ СЭРГЭЭХ МОДАЛ -->
 <div id="reset-modal" class="modal hidden">
     <div class="modal-content">
         <h3 style="margin-top:0; margin-bottom:10px;">🔑 Шинэ нууц үг оруулах</h3>
@@ -577,6 +581,7 @@
     </div>
 </div>
 
+<!-- 🎵 АЯЛГУУ СОНГОХ МОДАЛ -->
 <div id="music-modal" class="modal hidden">
     <div class="modal-content">
         <h3 style="margin-top:0; margin-bottom:12px;">🎵 Төвлөрөх аялгуу сонгох</h3>
@@ -645,35 +650,24 @@
     let currentQuizIndex = 0;
     let score = 0;
 
-    let rawWordsData = [
-        { char: "爱情", pinyin: "ài qíng", mn: "Хайр дурлал", ex_cn: "他们的爱情很感人。", ex_py: "Tāmen de àiqíng hěn gǎnrén.", ex_mn: "Тэдний хайр дурлал маш сэтгэл хөдөлгөж байна." },
-        { char: "安排", pinyin: "ān pái", mn: "Төлөвлөх, зохицуулах", ex_cn: "这个安排很好。", ex_py: "Zhège ānpái hěn hǎo.", ex_mn: "Энэ зохион байгуулалт маш сайн байна." },
-        { char: "安全", pinyin: "ān quán", mn: "Аюулгүй", ex_cn: "注意安全。", ex_py: "Zhùyì ānquán.", ex_mn: "Аюулгүй байдалдаа анхаараарай." },
-        { char: "按时", pinyin: "àn shí", mn: "Цагтаа, хугацаандаа", ex_cn: "请按时吃药。", ex_py: "Qǐng ànshí chī yào.", ex_mn: "Эмээ цагт нь уугаарай." },
-        { char: "按照", pinyin: "àn zhào", mn: "Дагуу, дагуулан", ex_cn: "按照要求做。", ex_py: "Ànzhào yāoqiú zuò.", ex_mn: "Шаардлагын дагуу хий." },
-        { char: "百分之", pinyin: "bǎi fēn zhī", mn: "Хувь (%)", ex_cn: "百分之八十的人同意。", ex_py: "Bǎi fēn zhī bāshí de rén tóngyì。", ex_mn: "Хүмүүсийн 80 хувь нь зөвшөөрсөн." },
-        { char: "棒", pinyin: "bàng", mn: "Мундаг, сайн", ex_cn: "你真棒！", ex_py: "Nǐ zhēn bàng!", ex_mn: "Чи үнэхээр мундаг юм!" },
-        { char: "包子", pinyin: "bāo zi", mn: "Бууз", ex_cn: "早上吃包子。", ex_py: "Zǎoshang chī bāozi.", ex_mn: "Өглөө бууз иднэ." },
-        { char: "保护", pinyin: "bǎo hù", mn: "Хамгаалах", ex_cn: "保护环境。", ex_py: "Bǎohù huánjìng.", ex_mn: "Байгаль орчноо хамгаалах." },
-        { char: "保证", pinyin: "bǎo zhèng", mn: "Баталгаажуулах, амлах", ex_cn: "我保证完成任务。", ex_py: "Wǒ bǎozhèng wánchéng rènwu.", ex_mn: "Би даалгавраа биелүүлнэ гэж амлаж байна." },
-        { char: "报名", pinyin: "bào míng", mn: "Бүртгүүлэх", ex_cn: "我想报名参加考试。", ex_py: "Wǒ xiǎng bàomíng cānjiā kǎoshì.", ex_mn: "Би шалгалтад бүртгүүлмээр байна." },
-        { char: "抱", pinyin: "bào", mn: "Тэврэх", ex_cn: "妈妈抱着孩子。", ex_py: "Māma bàozhe háizi.", ex_mn: "Ээж хүүхдээ тэвэрч байна." },
-        { char: "抱歉", pinyin: "bào qiàn", mn: "Уучлаарай, өршөөгөөрэй", ex_cn: "非常抱歉，我迟到了。", ex_py: "Fēicháng bàoqiàn, wǒ chídào le.", ex_mn: "Маш их уучлаарай, би хоцорчихлоо." },
-        { char: "倍", pinyin: "bèi", mn: "Дахин (дахин их)", ex_cn: "收入增加了两倍。", ex_py: "Shōurù zēngjiā le liǎng bèi.", ex_mn: "Орлого хоёр дахин нэмэгдсэн." },
-        { char: "本来", pinyin: "běn lái", mn: "Анхнаасаа, анх", ex_cn: "我本来打算去的。", ex_py: "Wǒ běnlái dǎsuàn qù de.", ex_mn: "Би анхнаасаа явах бодолтой байсан." }
-    ];
+    let rawWordsData = [];
+    let activeWordsList = [];
 
-    let activeWordsList = [...rawWordsData];
-
-    /* 🌐 SUPABASE-ЭЭС 600 ҮГЭЭ АРД ГАЦААХГҮЙЭЭР ТАТАЖ СЭРГЭЭХ ФУНКЦ */
-    async function loadWordsFromSupabaseInBackground() {
+    /* 🌐 SUPABASE-ИЙН 'hsk4_words' ТАБЛААС 600 ҮГИЙГ БҮРЭН ТАТАХ ЗӨВ ФУНКЦ */
+    async function fetchAllWordsFromSupabase() {
         try {
             const { data, error } = await supabaseClient
-                .from('words')
+                .from('hsk4_words')
                 .select('*')
-                .order('id', { ascending: true });
+                .order('id', { ascending: true })
+                .range(0, 599);
 
-            if (!error && data && data.length > 0) {
+            if (error) {
+                console.error("Supabase татахад алдаа гарлаа:", error);
+                return false;
+            }
+
+            if (data && data.length > 0) {
                 rawWordsData = data.map(w => ({
                     char: w.char,
                     pinyin: w.pinyin,
@@ -682,15 +676,13 @@
                     ex_py: w.example_pinyin || "",
                     ex_mn: w.example_translation || ""
                 }));
-                
-                if (!isFavOnlyMode) {
-                    activeWordsList = [...rawWordsData];
-                }
-                loadWord(globalIndex);
+                activeWordsList = [...rawWordsData];
+                return true;
             }
-        } catch(e) {
-            console.log("Background load silent fallback");
+        } catch (e) {
+            console.error("Supabase exception:", e);
         }
+        return false;
     }
 
     function loadVoices() {
@@ -1030,6 +1022,9 @@
     async function initApp() {
         updateStreak();
 
+        // 🌐 Supabase-ээс 600 үгийг татах
+        await fetchAllWordsFromSupabase();
+
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session && session.user) {
             currentUser = session.user;
@@ -1046,9 +1041,6 @@
             document.getElementById('user-email-text').innerText = currentUser.email;
 
             loadWord(globalIndex);
-            
-            // Background-д 600 үгээ сүлжээ гацаалгүй уншина
-            loadWordsFromSupabaseInBackground();
         } else {
             document.getElementById('auth-box').classList.remove('hidden');
             document.getElementById('app-content').classList.add('hidden');
