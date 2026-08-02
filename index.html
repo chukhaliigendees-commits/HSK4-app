@@ -592,24 +592,28 @@
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
+    /* 🔊 ЗӨӨЛӨН ЭМЭГТЭЙ ТОД ХООЛОЙ СOНГОХ ТОХИРГОО */
     function playTTS(text) {
         if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
 
         const msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'zh-CN';
-        msg.rate = 0.82;
+        msg.rate = 0.85; 
+        msg.pitch = 1.15; // Дээшлүүлж зөөлөн нарийхан эмэгтэй өнгөтэй болгов
 
         if (availableVoices.length === 0) {
             availableVoices = window.speechSynthesis.getVoices();
         }
 
+        // iPhone / Safari болон Chrome дээрх хамгийн тод зөөлөн эмэгтэй дуунууд
         const bestVoice = availableVoices.find(v => v.lang.includes('zh') && (
-            v.name.includes('Xiaoxiao') || 
-            v.name.includes('Yunxi') ||
-            v.name.includes('Natural') || 
-            v.name.includes('Google') || 
-            v.name.includes('Microsoft')
+            v.name.includes('Tingting') || 
+            v.name.includes('Sinji') ||
+            v.name.includes('Xiaoxiao') ||
+            v.name.includes('Mei-Jia') ||
+            v.name.includes('Google 普通话') ||
+            v.name.includes('Natural')
         )) || availableVoices.find(v => v.lang.includes('zh'));
 
         if (bestVoice) msg.voice = bestVoice;
@@ -1115,14 +1119,14 @@
         }
     }
 
-    /* 🎨 БҮТЭН ДЭЛГЭЦЭЭР ТОМ ХАНЗ БИЧИХ MODAL ЛОГИК */
+    /* 🎨 ЗААВАРТАЙ БОЛОН ЗААВАРГҮЙ ЗУРАХ / ДАДЛАГА ЛОГИК */
     function openPracticeModal(showGuide) {
         isGuideEnabled = showGuide;
         currentModalCharIndex = 0;
 
         document.getElementById('big-practice-modal').classList.remove('hidden');
         document.body.classList.add('modal-active');
-        document.getElementById('modal-title').innerText = showGuide ? "📝 Заавартай бичих" : "🎨 Бичиж турших";
+        document.getElementById('modal-title').innerText = showGuide ? "📝 Бүдэг заавартай бичих" : "🎨 Зааваргүй өөрөө зурах";
 
         loadModalCharacter(currentModalCharIndex);
     }
@@ -1141,20 +1145,22 @@
 
         document.getElementById('modal-step-info').innerText = `Дасгал: ${charIndex + 1} / ${wordCharText.length} (${singleChar})`;
 
+        // showOutline: isGuideEnabled -> Заавартай бол Арын сүүдэр тод гарна, Зааваргүй бол Арын сүүдэр гарахгүй
         bigModalWriter = HanziWriter.create('big-modal-target', singleChar, {
             width: 270,
             height: 270,
             padding: 10,
             showOutline: isGuideEnabled,
             strokeColor: '#4f46e5',
-            outlineColor: '#94a3b8',
+            outlineColor: isGuideEnabled ? '#cbd5e1' : '#ffffff', // Зааваргүй үед арын сүүдрийг цагаан буюу харагдахгүй болгов
             drawingColor: '#059669',
             drawingWidth: 16,
             showCharacter: false
         });
 
         bigModalWriter.quiz({
-            showHintAfterMisses: 2,
+            showHintAfterMisses: isGuideEnabled ? 2 : 0,
+            highlightOnMistake: isGuideEnabled,
             strokeFadeDuration: 200,
             onComplete: function() {
                 setTimeout(() => {
@@ -1174,7 +1180,7 @@
         loadModalCharacter(currentModalCharIndex);
     }
 
-    // 🎙 ИЛҮҮ АЮУЛГҮЙ МИКРОФОН САНАЛ АВАХ ФУНКЦ
+    // 🎙 МИКРОФОН САНАЛ АВАХ ФУНКЦ
     function speakCurrentWord() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
