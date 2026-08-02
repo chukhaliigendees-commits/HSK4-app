@@ -645,7 +645,7 @@
     let currentQuizIndex = 0;
     let score = 0;
 
-    const rawWordsData = [
+    let rawWordsData = [
         { char: "爱情", pinyin: "ài qíng", mn: "Хайр дурлал", ex_cn: "他们的爱情很感人。", ex_py: "Tāmen de àiqíng hěn gǎnrén.", ex_mn: "Тэдний хайр дурлал маш сэтгэл хөдөлгөж байна." },
         { char: "安排", pinyin: "ān pái", mn: "Төлөвлөх, зохицуулах", ex_cn: "这个安排很好。", ex_py: "Zhège ānpái hěn hǎo.", ex_mn: "Энэ зохион байгуулалт маш сайн байна." },
         { char: "安全", pinyin: "ān quán", mn: "Аюулгүй", ex_cn: "注意安全。", ex_py: "Zhùyì ānquán.", ex_mn: "Аюулгүй байдалдаа анхаараарай." },
@@ -664,6 +664,34 @@
     ];
 
     let activeWordsList = [...rawWordsData];
+
+    /* 🌐 SUPABASE-ЭЭС 600 ҮГЭЭ АРД ГАЦААХГҮЙЭЭР ТАТАЖ СЭРГЭЭХ ФУНКЦ */
+    async function loadWordsFromSupabaseInBackground() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('words')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (!error && data && data.length > 0) {
+                rawWordsData = data.map(w => ({
+                    char: w.char,
+                    pinyin: w.pinyin,
+                    mn: w.meaning,
+                    ex_cn: w.example_sentence || "",
+                    ex_py: w.example_pinyin || "",
+                    ex_mn: w.example_translation || ""
+                }));
+                
+                if (!isFavOnlyMode) {
+                    activeWordsList = [...rawWordsData];
+                }
+                loadWord(globalIndex);
+            }
+        } catch(e) {
+            console.log("Background load silent fallback");
+        }
+    }
 
     function loadVoices() {
         if ('speechSynthesis' in window) {
@@ -1018,6 +1046,9 @@
             document.getElementById('user-email-text').innerText = currentUser.email;
 
             loadWord(globalIndex);
+            
+            // Background-д 600 үгээ сүлжээ гацаалгүй уншина
+            loadWordsFromSupabaseInBackground();
         } else {
             document.getElementById('auth-box').classList.remove('hidden');
             document.getElementById('app-content').classList.add('hidden');
