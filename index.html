@@ -270,7 +270,7 @@
 
         .hidden { display: none !important; }
 
-        /* --- AUTH & PASSWORD INPUT DESIGN --- */
+        /* AUTH & PASSWORD DESIGN */
         .auth-container { display: flex; flex-direction: column; gap: 10px; }
         .auth-input { 
             width: 100%;
@@ -281,7 +281,6 @@
             box-sizing: border-box;
         }
         
-        /* 👁 НҮДНИЙ ДҮРС БУЮУ НУУЦ ҮГ ХАРАХ ТОХИРГОО */
         .password-wrapper {
             position: relative;
             width: 100%;
@@ -496,7 +495,7 @@
     let isFavOnlyMode = false;
     let isAnimating = false;
 
-    // --- 🎵 АУДИО ENGINE ---
+    // AUDIO ENGINE
     let audioCtx = null;
     let activeNodes = [];
     let currentActiveId = '';
@@ -526,7 +525,7 @@
 
     activeWordsList = rawWordsData;
 
-    // --- 👁 НУУЦ ҮГ ИЛ/НУУЦ БОЛГОХ ФУНКЦ ---
+    // 👁 НУУЦ ҮГ ИЛ/НУУЦ БОЛГОХ
     function togglePasswordVisibility() {
         const passwordInput = document.getElementById('auth-password');
         const eyeIcon = document.getElementById('eye-icon');
@@ -539,7 +538,7 @@
         }
     }
 
-    // --- 📧 НУУЦ ҮГ СЭРГЭЭХ ИМЭЙЛ ИЛГЭЭХ ФУНКЦ ---
+    // 📧 НУУЦ ҮГ СЭРГЭЭХ ИМЭЙЛ (ЗӨВ REDIRECT URL-ТАЙ)
     async function handleForgotPassword() {
         const email = document.getElementById('auth-email').value;
         if (!email) {
@@ -548,7 +547,7 @@
         }
 
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.href,
+            redirectTo: 'https://chukhaliigendees-commits.github.io/HSK4-app/',
         });
 
         if (error) {
@@ -557,6 +556,21 @@
             alert(`📧 Нууц үг сэргээх холбоосыг "${email}" хаяг руу илгээлээ. Имэйлээ шалгаарай!`);
         }
     }
+
+    // 🔄 ИМЭЙЛЭЭС БУЦАЖ ИРЭХЭД ШИНЭ НУУЦ ҮГ АВАХ ХЭСЭГ
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+            const newPassword = prompt("Шинэ нууц үгээ оруулна уу:");
+            if (newPassword) {
+                const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+                if (error) {
+                    alert("Нууц үг солиход алдаа гарлаа: " + error.message);
+                } else {
+                    alert("🎉 Нууц үг амжилттай шинэчлэгдлээ! Одоо шинэ нууц үгээрээ нэвтрэнэ үү.");
+                }
+            }
+        }
+    });
 
     function openMusicModal() { document.getElementById('music-modal').classList.remove('hidden'); }
     function closeMusicModal() { document.getElementById('music-modal').classList.add('hidden'); }
@@ -1003,7 +1017,6 @@
         document.getElementById('translation').style.opacity = opacity;
     }
 
-    // --- 🎨 ЗҮҮНЭЭС БАРУУН РУУ ДАРААЛЖ ЗУРАХ АНИМАЦИ ---
     async function animateSingleWriter(writer) {
         return new Promise((resolve) => {
             writer.showCharacter();
@@ -1033,7 +1046,6 @@
         }
     }
 
-    // --- 📝 ДАДЛАГА (QUIZ) БҮРЭН ХАР ХАНЗ ТОДОРЧ ДУУСАХЫГ ХҮЛЭЭХ ТӨЛӨВ ---
     function togglePracticeMode() {
         const pBtn = document.getElementById('practice-btn');
 
