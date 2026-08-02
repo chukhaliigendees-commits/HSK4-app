@@ -624,8 +624,11 @@
     const WORDS_PER_TEST = 15;
     let isPaidUser = false;
     let currentUser = null;
-    let globalIndex = 0;
-    let savedGlobalIndex = 0; // 💡 Хэрэглэгчийн явж байсан 600 үгийн үндсэн ахицыг санах хувьсагч
+    
+    // 💡 Хэрэглэгч хамгийн сүүлд ямар үг дээр зогссоныг санах
+    let globalIndex = parseInt(localStorage.getItem('hsk4_last_index') || '0');
+    let savedGlobalIndex = globalIndex;
+    
     let writers = [];
     let isInfoVisible = true;
     let favorites = JSON.parse(localStorage.getItem('hsk4_favorites') || '[]');
@@ -684,7 +687,7 @@
         return false;
     }
 
-    /* 🎙 ЦЭВЭР, НАРИЙНХАН ЭМЭГТЭЙ МАНДАРИН ХООЛОЙ (Xiaoxiao/Tingting priority) */
+    /* 🎙 ЦЭВЭР, НАРИЙНХАН ЭМЭГТЭЙ МАНДАРИН ХООЛОЙ */
     function loadVoices() {
         if ('speechSynthesis' in window) {
             availableVoices = window.speechSynthesis.getVoices();
@@ -941,7 +944,6 @@
         }
     }
 
-    /* 💡 ОДТОЙ ҮГС РҮҮ ОРОХ БОЛОН БУЦАХАД ҮНДСЭН АХИЦЫГ САХИУЛАХ */
     function toggleFavOnly() {
         if (!isFavOnlyMode) {
             const favWords = rawWordsData.filter(w => favorites.includes(w.char));
@@ -949,7 +951,7 @@
                 alert("Та одоохондоо ямар нэгэн үг ⭐ одоор хадгалаагүй байна!");
                 return;
             }
-            savedGlobalIndex = globalIndex; // 🎯 Үндсэн явж байсан үгийн дугаарыг сануулав (Жш: 300)
+            savedGlobalIndex = globalIndex;
             activeWordsList = favWords;
             isFavOnlyMode = true;
             globalIndex = 0;
@@ -958,7 +960,7 @@
         } else {
             activeWordsList = [...rawWordsData];
             isFavOnlyMode = false;
-            globalIndex = savedGlobalIndex; // 🎯 Буцаад байсан яг тэр үг рүүгээ шилжинэ!
+            globalIndex = savedGlobalIndex;
             document.getElementById('fav-toggle').style.background = "#fef3c7";
             document.getElementById('fav-toggle').style.color = "#d97706";
         }
@@ -1122,6 +1124,11 @@
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
 
+        // 💡 Үндсэн 600 үгийн горимд байх үед сүүлчийн зогссон индексийг утсанд байнга хадгална!
+        if (!isFavOnlyMode) {
+            localStorage.setItem('hsk4_last_index', index);
+        }
+
         document.getElementById('voice-feedback-box').classList.add('hidden');
 
         const word = activeWordsList[index];
@@ -1136,7 +1143,7 @@
 
         const positionInBatch = (index % WORDS_PER_TEST) + 1;
         document.getElementById('current-index').innerText = positionInBatch;
-        document.getElementById('global-counter').innerText = isFavOnlyMode ? (index + 1) : (index + 1);
+        document.getElementById('global-counter').innerText = index + 1;
 
         const progressPercentage = (positionInBatch / Math.min(WORDS_PER_TEST, activeWordsList.length)) * 100;
         document.getElementById('progress-bar').style.width = progressPercentage + "%";
@@ -1193,10 +1200,9 @@
 
                 if (isFavOnlyMode) {
                     alert(`🎉 Баяр хүргэе! Та сонгосон ${total} одтой үгсийнхээ шалгалтыг ${score} зөв хариулж амжилттай давлаа!`);
-                    // 🎯 Шалгалтын дараа ОДТОЙ үгийн горимыг автоматаар хааж, ҮНДСЭН 600 үгийнхээ байсан газарт авчирна
                     isFavOnlyMode = false;
                     activeWordsList = [...rawWordsData];
-                    globalIndex = savedGlobalIndex; // Үндсэн явж байсан үг дээр шилжинэ
+                    globalIndex = savedGlobalIndex;
                     document.getElementById('fav-toggle').style.background = "#fef3c7";
                     document.getElementById('fav-toggle').style.color = "#d97706";
 
