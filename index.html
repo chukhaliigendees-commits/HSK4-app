@@ -653,38 +653,39 @@
     let rawWordsData = [];
     let activeWordsList = [];
 
-    /* 🌐 SUPABASE-ИЙН 'hsk4_words' ТАБЛААС 600 ҮГИЙГ БҮРЭН ТАТАХ ЗӨВ ФУНКЦ */
+    /* 🌐 SUPABASE-ИЙН 'hsk4_words' ТАБЛААС 600 ҮГИЙГ 100% НАЙДВАРТАЙ ТАТАХ */
     async function fetchAllWordsFromSupabase() {
         try {
-            const { data, error } = await supabaseClient
-                .from('hsk4_words')
-                .select('*')
-                .order('id', { ascending: true })
-                .range(0, 599);
+            // REST API-аар шууд болон супабэйс клиентээр татах найдвартай арга
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/hsk4_words?select=*&order=id.asc&limit=600`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+            });
 
-            if (error) {
-                console.error("Supabase татахад алдаа гарлаа:", error);
-                return false;
-            }
-
-            if (data && data.length > 0) {
-                rawWordsData = data.map(w => ({
-                    char: w.char,
-                    pinyin: w.pinyin,
-                    mn: w.meaning,
-                    ex_cn: w.example_sentence || "",
-                    ex_py: w.example_pinyin || "",
-                    ex_mn: w.example_translation || ""
-                }));
-                activeWordsList = [...rawWordsData];
-                return true;
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    rawWordsData = data.map(w => ({
+                        char: w.char,
+                        pinyin: w.pinyin,
+                        mn: w.meaning,
+                        ex_cn: w.example_sentence || "",
+                        ex_py: w.example_pinyin || "",
+                        ex_mn: w.example_translation || ""
+                    }));
+                    activeWordsList = [...rawWordsData];
+                    return true;
+                }
             }
         } catch (e) {
-            console.error("Supabase exception:", e);
+            console.error("Fetch exception:", e);
         }
         return false;
     }
 
+    /* 🎙 МЭРГЭЖЛИЙН НАРИЙНХАН, ЦЭВЭР ТОД МАНДАРИН ХОТАД/ЭМЭГТЭЙ ХООЛОЙ СОНГОХ */
     function loadVoices() {
         if ('speechSynthesis' in window) {
             availableVoices = window.speechSynthesis.getVoices();
@@ -702,23 +703,29 @@
 
             const msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'zh-CN';
-            msg.rate = 0.85; 
-            msg.pitch = 1.15;
+            msg.rate = 0.88; // Хэт хурдан эсвэл удаан биш яг тохиромжтой
+            msg.pitch = 1.25; // Нарийнхан, сонсоход чихэнд чимэгтэй цэвэр хоолой
 
             if (availableVoices.length === 0) {
                 availableVoices = window.speechSynthesis.getVoices();
             }
 
-            const bestVoice = availableVoices.find(v => v.lang.includes('zh') && (
-                v.name.includes('Natural') ||
-                v.name.includes('Xiaoxiao') ||
-                v.name.includes('Sinji') ||
-                v.name.includes('Tingting') || 
-                v.name.includes('Mei-Jia') ||
-                v.name.includes('Google 普通话')
-            )) || availableVoices.find(v => v.lang.includes('zh'));
+            // Шилдэг цэвэр мандарин хоолойг шүүж сонгоно
+            const priorityVoices = [
+                "Xiaoxiao", "Tingting", "Mei-Jia", "Sinji", "Google 普通话", "Chinese Female", "ZH-CN"
+            ];
 
-            if (bestVoice) msg.voice = bestVoice;
+            let selectedVoice = null;
+            for (let p of priorityVoices) {
+                selectedVoice = availableVoices.find(v => v.lang.includes('zh') && v.name.includes(p));
+                if (selectedVoice) break;
+            }
+
+            if (!selectedVoice) {
+                selectedVoice = availableVoices.find(v => v.lang.includes('zh'));
+            }
+
+            if (selectedVoice) msg.voice = selectedVoice;
             window.speechSynthesis.speak(msg);
         } catch (e) {
             console.error("Audio error:", e);
@@ -1008,21 +1015,22 @@
                 }
             }
             
-            isPaidUser = false;
-            statusElem.innerText = "FREE";
-            statusElem.className = "user-status free-badge";
-            document.getElementById('total-words-limit').innerText = "15";
+            isPaidUser = true; // Нэвтэрсэн хэрэглэгчид бүгдэд нь шууд 600 үгийг нээнэ
+            statusElem.innerText = "👑 VIP";
+            statusElem.className = "user-status vip-badge";
+            document.getElementById('total-words-limit').innerText = "600";
 
         } catch (err) {
             console.error("Profile шалгахад алдаа:", err);
-            isPaidUser = false;
+            isPaidUser = true;
+            document.getElementById('total-words-limit').innerText = "600";
         }
     }
 
     async function initApp() {
         updateStreak();
 
-        // 🌐 Supabase-ээс 600 үгийг татах
+        // 🌐 Supabase-ээс 600 үгийг бүрэн татна
         await fetchAllWordsFromSupabase();
 
         const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1141,11 +1149,7 @@
         const currentBatchMaxIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + (WORDS_PER_TEST - 1);
 
         if (globalIndex === currentBatchMaxIndex && !isFavOnlyMode) {
-            if (!isPaidUser && globalIndex >= 14) {
-                alert("🔒 Үнэгүй эрхийн 15 үг дууслаа. Цааш үргэлжлүүлж 600 үг сурахын тулд VIP эрх авна уу!");
-            } else {
-                alert("🎉 Энэ хэсгийн 15 үг дууслаа! Доорх 'Шалгах тест өгөх' товчийг дарж шалгалтаа өгнө үү.");
-            }
+            alert("🎉 Энэ багцын 15 үг дууслаа! Доорх 'Шалгах тест өгөх' товчийг дарж шалгалтаа өгөөд дараагийн багц руу шилжээрэй.");
             return;
         }
 
@@ -1187,11 +1191,11 @@
                 const nextBatchStartIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
 
                 if (nextBatchStartIndex < activeWordsList.length) {
-                    globalIndex = nextBatchStartIndex;
+                    globalIndex = nextBatchStartIndex; // 🎯 Шууд дараагийн 16-30 дахь үг рүү шилжинэ!
                     alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг давлаа. Дараагийн багц (${globalIndex + 1}-ээс эхлэх) нээгдлээ!`);
                 } else {
                     globalIndex = 0;
-                    alert("👏 Баяр хүргэе! Та бүх үгийг сурч дууслаа.");
+                    alert("👏 Баяр хүргэе! Та бүх 600 үгийг сурч дууслаа.");
                 }
                 
                 loadWord(globalIndex);
