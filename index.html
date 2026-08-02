@@ -257,7 +257,7 @@
         .btn-toggle { background-color: #64748b; color: white; }
         .btn-draw { background-color: #059669; color: white; }
         .btn-practice { background-color: #8b5cf6; color: white; }
-        .btn-speak { background-color: #10b981; color: white; }
+        .btn-speak { background-color: #10b981; color: white; transition: background 0.2s ease; }
 
         .nav-container {
             display: flex;
@@ -428,7 +428,7 @@
         <div class="btn-grid">
             <button onclick="speakWord()" class="btn-sound">🔊 Сонсох</button>
             <button onclick="toggleInfo()" class="btn-toggle">👁 Нуух / Харах</button>
-            <button id="draw-btn" onclick="openPracticeModal(false)" class="btn-draw">🎨 Зурах</button>
+            <button id="draw-btn" onclick="openPracticeModal(false)" class="btn-draw">🎨 Зурах (Нууц)</button>
             <button id="practice-btn" onclick="openPracticeModal(true)" class="btn-practice">📝 Дадлага (Заавартай)</button>
             <button onclick="speakCurrentWord()" class="btn-speak">🎙 Ярих</button>
         </div>
@@ -752,9 +752,9 @@
         document.getElementById('music-toggle').style.background = "#dcfce7";
     }
 
-    function playCustomAudio(e) {
+    function playCustomAudio(event) {
         stopMusic();
-        const file = e.target.files[0];
+        const file = event.target.files[0];
         if (file) {
             const music = document.getElementById('bg-music');
             music.src = URL.createObjectURL(file);
@@ -1145,14 +1145,14 @@
 
         document.getElementById('modal-step-info').innerText = `Дасгал: ${charIndex + 1} / ${wordCharText.length} (${singleChar})`;
 
-        // showOutline: isGuideEnabled -> Заавартай бол Арын сүүдэр тод гарна, Зааваргүй бол Арын сүүдэр гарахгүй
+        // showOutline: isGuideEnabled -> Заавартай бол Арын сүүдэр тод гарна, Зааваргүй бол Арын сүүдэр цагаан (харагдахгүй)
         bigModalWriter = HanziWriter.create('big-modal-target', singleChar, {
             width: 270,
             height: 270,
             padding: 10,
             showOutline: isGuideEnabled,
             strokeColor: '#4f46e5',
-            outlineColor: isGuideEnabled ? '#cbd5e1' : '#ffffff', // Зааваргүй үед арын сүүдрийг цагаан буюу харагдахгүй болгов
+            outlineColor: isGuideEnabled ? '#cbd5e1' : '#ffffff', 
             drawingColor: '#059669',
             drawingWidth: 16,
             showCharacter: false
@@ -1180,7 +1180,7 @@
         loadModalCharacter(currentModalCharIndex);
     }
 
-    // 🎙 МИКРОФОН САНАЛ АВАХ ФУНКЦ
+    // 🎙 МИКРОФОН САНАЛ АВАХ ФУНКЦ (iOS Safari alert-гүй зассан)
     function speakCurrentWord() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -1193,9 +1193,15 @@
             const recognition = new SpeechRecognition();
             recognition.lang = 'zh-CN';
             recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            const speakBtn = document.querySelector('.btn-speak');
+            const originalText = speakBtn.innerText;
 
             recognition.onstart = () => {
-                alert("🎙 Та одоо микрофон руугаа үгийг хэлээрэй...");
+                // Товчлуурын бичгийг өөрчилж мэдэгдэнэ (Гацдаг alert ашиглахгүй)
+                speakBtn.innerText = "🎙 Сонсож байна...";
+                speakBtn.style.background = "#ef4444"; // Улаан өнгөөр анивчуулна
             };
 
             recognition.onresult = (event) => {
@@ -1205,12 +1211,20 @@
                 if (spokenText.includes(targetWord) || targetWord.includes(spokenText)) {
                     alert(`✅ Маш сайн! Зөв дуудлаа: "${spokenText}"`);
                 } else {
-                    alert(`❌ Буруу дуудлаа. Та "${spokenText}" гэж хэллээ. Зөв дуудлага: "${targetWord}"`);
+                    alert(`❌ Та "${spokenText}" гэж хэллээ. Зөв дуудлага: "${targetWord}"`);
                 }
             };
 
             recognition.onerror = (event) => {
-                alert("Микрофон ашиглахад хязгаарлалт гарлаа. Утасны тохиргооноос Safari-д микрофон ашиглах зөвшөөрөл өгсөн эсэхээ шалгаарай.");
+                if (event.error !== 'no-speech') {
+                    alert("Микрофон ашиглахад алдаа гарлаа: " + event.error);
+                }
+            };
+
+            recognition.onend = () => {
+                // Төлөвийг буцааж хэвийн болгоно
+                speakBtn.innerText = originalText;
+                speakBtn.style.background = "#10b981";
             };
 
             recognition.start();
