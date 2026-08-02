@@ -270,8 +270,44 @@
 
         .hidden { display: none !important; }
 
+        /* --- AUTH & PASSWORD INPUT DESIGN --- */
         .auth-container { display: flex; flex-direction: column; gap: 10px; }
-        .auth-input { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 0.9rem; }
+        .auth-input { 
+            width: 100%;
+            padding: 12px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 10px; 
+            font-size: 0.9rem; 
+            box-sizing: border-box;
+        }
+        
+        /* 👁 НҮДНИЙ ДҮРС БУЮУ НУУЦ ҮГ ХАРАХ ТОХИРГОО */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .toggle-password-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0;
+            color: #64748b;
+        }
+
+        .forgot-btn {
+            background: none;
+            color: #4f46e5;
+            font-size: 0.8rem;
+            text-decoration: underline;
+            padding: 4px;
+            cursor: pointer;
+            align-self: flex-end;
+        }
 
         .quiz-card { display: flex; flex-direction: column; align-items: center; }
         .quiz-options { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 16px; }
@@ -327,10 +363,18 @@
         <button onclick="handleLogout()" style="background: #ef4444; color: white; padding: 4px 10px; font-size: 0.75rem;">Гарах</button>
     </div>
 
+    <!-- 🔑 НЭВТРЭХ & БҮРТГҮҮЛЭХ ХЭСЭГ -->
     <div id="auth-box" class="auth-container">
         <h3>Нэвтрэх</h3>
         <input type="email" id="auth-email" class="auth-input" placeholder="Имэйл хаяг">
-        <input type="password" id="auth-password" class="auth-input" placeholder="Нууц үг">
+        
+        <div class="password-wrapper">
+            <input type="password" id="auth-password" class="auth-input" placeholder="Нууц үг">
+            <button type="button" onclick="togglePasswordVisibility()" class="toggle-password-btn" id="eye-icon">👁</button>
+        </div>
+
+        <button type="button" onclick="handleForgotPassword()" class="forgot-btn">Нууц үг мартсан уу?</button>
+
         <button onclick="handleLogin()" style="background: var(--primary); color: white;">Нэвтрэх</button>
         <button onclick="handleSignUp()" style="background: var(--success); color: white;">Бүртгүүлэх</button>
     </div>
@@ -481,6 +525,38 @@
     ];
 
     activeWordsList = rawWordsData;
+
+    // --- 👁 НУУЦ ҮГ ИЛ/НУУЦ БОЛГОХ ФУНКЦ ---
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById('auth-password');
+        const eyeIcon = document.getElementById('eye-icon');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            eyeIcon.innerText = '🙈';
+        } else {
+            passwordInput.type = 'password';
+            eyeIcon.innerText = '👁';
+        }
+    }
+
+    // --- 📧 НУУЦ ҮГ СЭРГЭЭХ ИМЭЙЛ ИЛГЭЭХ ФУНКЦ ---
+    async function handleForgotPassword() {
+        const email = document.getElementById('auth-email').value;
+        if (!email) {
+            alert("Имэйл хаягаа оруулсны дараа 'Нууц үг мартсан уу?' товчийг дарна уу!");
+            return;
+        }
+
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.href,
+        });
+
+        if (error) {
+            alert("Алдаа гарлаа: " + error.message);
+        } else {
+            alert(`📧 Нууц үг сэргээх холбоосыг "${email}" хаяг руу илгээлээ. Имэйлээ шалгаарай!`);
+        }
+    }
 
     function openMusicModal() { document.getElementById('music-modal').classList.remove('hidden'); }
     function closeMusicModal() { document.getElementById('music-modal').classList.add('hidden'); }
@@ -994,7 +1070,6 @@
             if (index >= writers.length) {
                 document.querySelectorAll('.character-box').forEach(b => b.classList.remove('active-box'));
                 
-                // 🛠️ СҮҮЛЧИЙН ЗУРЛАГ ГҮЙЦЭД ТОДОРЧ, ХАР ӨНГӨТЭЙ БОЛОХЫГ 0.5 СЕКУНД ХҮЛЭЭЖ ИЛГЭЭХ
                 setTimeout(() => {
                     alert("🎉 Баяр хүргэе! Ханзыг дарааллын дагуу зөв бичиж дуусгалаа.");
                 }, 500);
