@@ -234,7 +234,6 @@
         .example-pinyin { font-size: 0.82rem; color: #6366f1; margin-bottom: 4px; }
         .example-mn { font-size: 0.82rem; color: #475569; }
 
-        /* 🎙 VOICE RESULT FEEDBACK BOX */
         .voice-feedback-box {
             background: #f0fdf4;
             border: 1px solid #bbf7d0;
@@ -287,15 +286,61 @@
 
         .hidden { display: none !important; }
 
-        /* AUTH & PASSWORD DESIGN */
-        .auth-container { display: flex; flex-direction: column; gap: 10px; margin-top: auto; margin-bottom: auto; }
+        /* 🎨 ИТГЭЛ ТӨРҮҮЛЭХ ШИНЭ НЭВТРЭХ ХЭСГИЙН ДИЗАЙН */
+        .auth-container { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 14px; 
+            margin-top: auto; 
+            margin-bottom: auto; 
+            padding: 10px 0;
+        }
+
+        .auth-hero-card {
+            background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+            color: white;
+            padding: 20px 16px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+            margin-bottom: 6px;
+        }
+
+        .auth-hero-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .auth-hero-desc {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin: 0 0 14px 0;
+            line-height: 1.4;
+        }
+
+        .auth-features {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
         .auth-input { 
             width: 100%;
-            padding: 12px; 
+            padding: 12px 14px; 
             border: 1px solid #cbd5e1; 
-            border-radius: 10px; 
+            border-radius: 12px; 
             font-size: 0.9rem; 
             box-sizing: border-box;
+            background: #f8fafc;
         }
         
         .password-wrapper {
@@ -320,9 +365,10 @@
             color: #4f46e5;
             font-size: 0.8rem;
             text-decoration: underline;
-            padding: 4px;
+            padding: 2px;
             cursor: pointer;
             align-self: flex-end;
+            font-weight: 600;
         }
 
         /* 🎯 QUIZ STYLES (ЗӨВ / БУРУУ ӨНГӨ) */
@@ -390,14 +436,15 @@
 <audio id="user-voice-playback"></audio>
 
 <div class="app-card">
-    <div>
+    <!-- Дээд талын хэрэгсэл зөвхөн нэвтэрсний дараа харагдана -->
+    <div id="top-tools-wrapper" class="hidden">
         <div class="top-tools">
             <div id="streak-count" class="streak-badge">🔥 1 өдрийн цуврал</div>
             <button id="fav-toggle" onclick="toggleFavOnly()" class="fav-filter-btn">⭐ Одтой үгс (0)</button>
             <button id="music-toggle" onclick="openMusicModal()" class="tool-btn">🎵 Аялгуу сонгох</button>
         </div>
 
-        <div id="user-bar" class="user-bar hidden">
+        <div id="user-bar" class="user-bar">
             <div>
                 <span id="user-email-text" style="font-weight: 600; color: #374151;"></span>
                 <span id="user-vip-status" class="user-status free-badge">FREE</span>
@@ -406,9 +453,18 @@
         </div>
     </div>
 
-    <!-- 🔑 НЭВТРЭХ ХЭСЭГ -->
+    <!-- 🔑 ИТГЭЛ ТӨРҮҮЛЭХ ШИНЭЧЛЭСЭН НЭВТРЭХ ХЭСЭГ -->
     <div id="auth-box" class="auth-container">
-        <h3>Нэвтрэх</h3>
+        <div class="auth-hero-card">
+            <h2 class="auth-hero-title">🇨🇳 HSK 4 Master</h2>
+            <p class="auth-hero-desc">600 ахисан түвшний үгийг хамгийн амархан бөгөөд интерактив аргаар цээжилж, HSK 4 шалгалтаа амжилттай даваарай!</p>
+            <div class="auth-features">
+                <div>✍️ Ханз Бичих</div>
+                <div>🎙 Дуудлага Засах</div>
+                <div>🎯 Шалгах Тест</div>
+            </div>
+        </div>
+
         <input type="email" id="auth-email" class="auth-input" placeholder="Имэйл хаяг">
         
         <div class="password-wrapper">
@@ -418,8 +474,8 @@
 
         <button type="button" onclick="handleForgotPassword()" class="forgot-btn">Нууц үг мартсан уу?</button>
 
-        <button onclick="handleLogin()" style="background: var(--primary); color: white;">Нэвтрэх</button>
-        <button onclick="handleSignUp()" style="background: var(--success); color: white;">Бүртгүүлэх</button>
+        <button onclick="handleLogin()" style="background: var(--primary); color: white; padding: 12px; font-size: 0.95rem; border-radius: 12px;">Нэвтрэх</button>
+        <button onclick="handleSignUp()" style="background: var(--success); color: white; padding: 12px; font-size: 0.95rem; border-radius: 12px;">Шинээр бүртгүүлэх</button>
     </div>
 
     <div id="app-content" class="hidden">
@@ -965,7 +1021,7 @@
             document.getElementById('auth-box').classList.add('hidden');
             document.getElementById('app-content').classList.remove('hidden');
             document.getElementById('quiz-content').classList.add('hidden');
-            document.getElementById('user-bar').classList.remove('hidden');
+            document.getElementById('top-tools-wrapper').classList.remove('hidden');
             document.getElementById('user-email-text').innerText = currentUser.email;
 
             loadWord(globalIndex);
@@ -973,7 +1029,7 @@
             document.getElementById('auth-box').classList.remove('hidden');
             document.getElementById('app-content').classList.add('hidden');
             document.getElementById('quiz-content').classList.add('hidden');
-            document.getElementById('user-bar').classList.add('hidden');
+            document.getElementById('top-tools-wrapper').classList.add('hidden');
         }
     }
 
@@ -1089,22 +1145,27 @@
         showQuizQuestion();
     }
 
+    /* 🎯 ТЕСТ ТЭНЦЭХҮҮД ДАРААГИЙН БАГЦ РУУ ШУУД ҮСРЭХ ЗАСРАЛТ */
     function showQuizQuestion() {
         if (currentQuizIndex >= quizQuestions.length) {
             const total = quizQuestions.length;
             
             if ((score / total) >= 0.8) {
-                alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг амжилттай давлаа.`);
+                alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг амжилттай давлаа. Дараагийн багц нээгдлээ!`);
                 
                 document.getElementById('quiz-content').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
 
-                // Цааш үргэлжлүүлж дараагийн багц руу шилжих
-                globalIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
-                if (globalIndex >= activeWordsList.length) {
+                // ИНДЕКСИЙГ ШИНЭЧЛЭХ - 15-р үг байсан бол шууд 16 дахь үг рүү шилжинэ
+                const nextBatchIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
+                if (nextBatchIndex < activeWordsList.length) {
+                    globalIndex = nextBatchIndex;
+                } else {
                     globalIndex = activeWordsList.length - 1;
                     alert("👏 Баяр хүргэе! Та бэлэн байгаа бүх үгийг сурч дууслаа.");
                 }
+                
+                // ДЭЛГЭЦИЙГ ДАХИН АЧААЛЖ АЧААЛНА
                 loadWord(globalIndex);
 
             } else {
@@ -1142,7 +1203,6 @@
         });
     }
 
-    /* 🎯 ШАЛГАЛТЫН ТЕСТ - ЗӨВ / БУРУУ ӨНГӨ БҮДЭГ НОГООН & УЛААН БОЛЖ БУДАГДАХ */
     function handleAnswer(isCorrect, btnElement) {
         const allBtns = document.querySelectorAll('.quiz-option-btn');
         allBtns.forEach(b => b.style.pointerEvents = 'none');
@@ -1271,7 +1331,6 @@
         const textElem = document.getElementById('voice-result-text');
 
         try {
-            // ШУУГИАН ШҮҮГЧТЭЙ АУДИО СТРИМ
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     echoCancellation: true,
@@ -1336,7 +1395,6 @@
         }
     }
 
-    /* 🔊 ХЭРЭГЛЭГЧИЙН ДУУГ ТОГЛУУЛАХ / ЗОГСООХ ЛОГИК */
     function togglePlayMyVoice() {
         const player = document.getElementById('user-voice-playback');
         const playBtn = document.getElementById('play-my-voice-btn');
