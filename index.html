@@ -286,7 +286,7 @@
 
         .hidden { display: none !important; }
 
-        /* 🎨 ИТГЭЛ ТӨРҮҮЛЭХ ШИНЭ НЭВТРЭХ ХЭСГИЙН ДИЗАЙН */
+        /* 🎨 НЭВТРЭХ ХЭСГИЙН HERO ДИЗАЙН */
         .auth-container { 
             display: flex; 
             flex-direction: column; 
@@ -436,7 +436,6 @@
 <audio id="user-voice-playback"></audio>
 
 <div class="app-card">
-    <!-- Дээд талын хэрэгсэл зөвхөн нэвтэрсний дараа харагдана -->
     <div id="top-tools-wrapper" class="hidden">
         <div class="top-tools">
             <div id="streak-count" class="streak-badge">🔥 1 өдрийн цуврал</div>
@@ -453,7 +452,7 @@
         </div>
     </div>
 
-    <!-- 🔑 ИТГЭЛ ТӨРҮҮЛЭХ ШИНЭЧЛЭСЭН НЭВТРЭХ ХЭСЭГ -->
+    <!-- 🔑 НЭВТРЭХ ХЭСЭГ -->
     <div id="auth-box" class="auth-container">
         <div class="auth-hero-card">
             <h2 class="auth-hero-title">🇨🇳 HSK 4 Master</h2>
@@ -507,7 +506,6 @@
             <div id="example-mn" class="example-mn">...</div>
         </div>
 
-        <!-- 🎙 ХЭРЭГЛЭГЧИЙН ЯРЬСАН ДУУГ БУЦААЖ СОНСГОХ / ЗОГСООХ ХЭСЭГ -->
         <div id="voice-feedback-box" class="voice-feedback-box hidden">
             <div>
                 <span id="voice-result-status" style="font-weight: 700;">✅ Зөв: </span>
@@ -554,7 +552,6 @@
     <div></div>
 </div>
 
-<!-- 🎨 БҮТЭН ДЭЛГЭЦЭЭР ТОМ ХАНЗ ЗУРАХ / ДАДЛАГА МOДАЛ -->
 <div id="big-practice-modal" class="modal hidden">
     <div class="modal-content" style="background: #1e293b; color: white; text-align: center; border-radius: 28px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -576,7 +573,6 @@
     </div>
 </div>
 
-<!-- 🔒 НУУЦ ҮГ ШИНЭЧЛЭХ ЦОНХ -->
 <div id="reset-modal" class="modal hidden">
     <div class="modal-content">
         <h3 style="margin-top:0; margin-bottom:10px;">🔑 Шинэ нууц үг оруулах</h3>
@@ -586,7 +582,6 @@
     </div>
 </div>
 
-<!-- 🎵 АЯЛГУУ СОНГОХ ЦОНХ -->
 <div id="music-modal" class="modal hidden">
     <div class="modal-content">
         <h3 style="margin-top:0; margin-bottom:12px;">🎵 Төвлөрөх аялгуу сонгох</h3>
@@ -637,12 +632,10 @@
     let isFavOnlyMode = false;
     let isAnimating = false;
 
-    // Modal Drawing Variables
     let bigModalWriter = null;
     let currentModalCharIndex = 0;
     let isGuideEnabled = true;
 
-    // AUDIO RECORDING & PLAYBACK
     let mediaRecorder = null;
     let audioChunks = [];
     let recordedAudioUrl = null;
@@ -944,7 +937,6 @@
         loadWord(globalIndex);
     }
 
-    /* 🔐 SINGLE DEVICE SESSION LOCK LOGIC */
     async function checkAndLockSession(user, session) {
         if (!user || !session) return true;
         const currentToken = session.access_token.slice(-20);
@@ -1080,6 +1072,7 @@
         }
     }
 
+    /* 📌 ҮГ АЧААЛАХ ЛОГИК (ГАРЦААГҮЙ ШИНЭЧЛЭХ ЗАСВАР) */
     function loadWord(index) {
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
@@ -1145,33 +1138,35 @@
         showQuizQuestion();
     }
 
-    /* 🎯 ТЕСТ ТЭНЦЭХҮҮД ДАРААГИЙН БАГЦ РУУ ШУУД ҮСРЭХ ЗАСРАЛТ */
+    /* 🎯 ШАЛГАЛТАД ТЭНЦВЭЛ 16 ДАХЬ ҮГ РҮҮ ШУУД ШИЛЖИХ ЖИНХЭНЭ ЗАСВАР */
     function showQuizQuestion() {
         if (currentQuizIndex >= quizQuestions.length) {
             const total = quizQuestions.length;
             
             if ((score / total) >= 0.8) {
-                alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг амжилттай давлаа. Дараагийн багц нээгдлээ!`);
-                
-                document.getElementById('quiz-content').classList.add('hidden');
-                document.getElementById('app-content').classList.remove('hidden');
+                // ДАРААГИЙН БАГЦ РУУ ШИЛЖҮҮЛЭХ
+                const nextIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
 
-                // ИНДЕКСИЙГ ШИНЭЧЛЭХ - 15-р үг байсан бол шууд 16 дахь үг рүү шилжинэ
-                const nextBatchIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
-                if (nextBatchIndex < activeWordsList.length) {
-                    globalIndex = nextBatchIndex;
+                if (nextIndex < activeWordsList.length) {
+                    globalIndex = nextIndex; // 15 байсан бол 16 болгоно
+                    alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг амжилттай давлаа. Дараагийн хэсгийн (${globalIndex + 1}-ээс эхлэх) үгс нээгдлээ!`);
                 } else {
                     globalIndex = activeWordsList.length - 1;
                     alert("👏 Баяр хүргэе! Та бэлэн байгаа бүх үгийг сурч дууслаа.");
                 }
+
+                document.getElementById('quiz-content').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
                 
-                // ДЭЛГЭЦИЙГ ДАХИН АЧААЛЖ АЧААЛНА
+                // ДЭЛГЭЦИЙН ҮГИЙГ ШИНЭЧЛЭХ
                 loadWord(globalIndex);
 
             } else {
                 alert(`❌ Өө! Та ${total} асуултаас ${score} авлаа. Дараагийн багц руу шилжихийн тулд 80%-иас дээш сайн хариулах шаардлагатай. Дахин оролдоно уу.`);
                 document.getElementById('quiz-content').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
+                // Тэнцээгүй бол өмнөх багцын сүүлийн үг дээр үлдэнэ
+                loadWord(globalIndex);
             }
             return;
         }
@@ -1198,18 +1193,21 @@
             const btn = document.createElement('button');
             btn.className = 'quiz-option-btn';
             btn.innerText = opt;
-            btn.onclick = (e) => handleAnswer(opt === currentWord.mn, e.target);
+            btn.onclick = (e) => handleAnswer(opt === currentWord.mn, e.target, currentWord.char);
             optionsContainer.appendChild(btn);
         });
     }
 
-    function handleAnswer(isCorrect, btnElement) {
+    /* 🔊 ЗӨВ ХАРИУЛАХАД ҮГИЙГ ТОД ЧАНГА ХЭЛЖ СОНСГОДОГ БОЛГОЛОО */
+    function handleAnswer(isCorrect, btnElement, chineseChar) {
         const allBtns = document.querySelectorAll('.quiz-option-btn');
         allBtns.forEach(b => b.style.pointerEvents = 'none');
 
         if (isCorrect) {
             score++;
             btnElement.classList.add('correct');
+            // ЗӨВ ХАРИУЛМАГЦ ХЯТАД ДУУДЛАГЫГ УНШИНА!
+            playTTS(chineseChar);
         } else {
             btnElement.classList.add('wrong');
         }
@@ -1217,7 +1215,7 @@
         setTimeout(() => {
             currentQuizIndex++;
             showQuizQuestion();
-        }, 700);
+        }, 1000); // 1 секунд байлгаж дууг нь гүйцэд сонсгоно
     }
 
     function toggleInfo() {
@@ -1256,7 +1254,6 @@
         }
     }
 
-    /* 🎨 ЗААВАРТАЙ БОЛОН ЗААВАРГҮЙ ЗУРАХ / ДАДЛАГА ЛОГИК */
     function openPracticeModal(showGuide) {
         isGuideEnabled = showGuide;
         currentModalCharIndex = 0;
@@ -1316,7 +1313,6 @@
         loadModalCharacter(currentModalCharIndex);
     }
 
-    /* 🎙 МИКРОФОН САНАЛ АВАХ БОЛОН ЦЭВЭРХЭН АУДИО БИЧИХ СИСТЕМ */
     async function speakCurrentWord() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
