@@ -625,6 +625,7 @@
     let isPaidUser = false;
     let currentUser = null;
     let globalIndex = 0;
+    let savedGlobalIndex = 0; // 💡 Хэрэглэгчийн явж байсан 600 үгийн үндсэн ахицыг санах хувьсагч
     let writers = [];
     let isInfoVisible = true;
     let favorites = JSON.parse(localStorage.getItem('hsk4_favorites') || '[]');
@@ -683,7 +684,7 @@
         return false;
     }
 
-    /* 🎙 ЦЭВЭР, ТУНГАЛАГ МАНДАРИН ЭМЭГТЭЙ ХООЛОЙ СОНГОХ ТӨХӨӨРӨМЖИЙН ТОХИРУУЛГА */
+    /* 🎙 ЦЭВЭР, НАРИЙНХАН ЭМЭГТЭЙ МАНДАРИН ХООЛОЙ (Xiaoxiao/Tingting priority) */
     function loadVoices() {
         if ('speechSynthesis' in window) {
             availableVoices = window.speechSynthesis.getVoices();
@@ -702,20 +703,19 @@
             const msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'zh-CN';
             msg.rate = 0.85; 
-            msg.pitch = 1.1; // Цэвэр, шуугиангүй байгалийн аялгатай эмэгтэй тон
+            msg.pitch = 1.2; 
 
             if (availableVoices.length === 0) {
                 availableVoices = window.speechSynthesis.getVoices();
             }
 
-            // Шилдэг цэвэр, нарийнхан тод мандарин эмэгтэй хоолойн жагсаалт
-            const femaleMandarinVoices = [
-                "Xiaoxiao", "Microsoft Xiaoxiao", "Google 普通话", "Tingting", "Mei-Jia", "Sinji", "ZH-CN Female"
+            const priorityFemaleVoices = [
+                "Xiaoxiao", "Microsoft Xiaoxiao Online (Natural)", "Tingting", "Mei-Jia", "Google 普通话", "Chinese Female"
             ];
 
             let selectedVoice = null;
-            for (let name of femaleMandarinVoices) {
-                selectedVoice = availableVoices.find(v => v.lang.includes('zh') && v.name.includes(name));
+            for (let vName of priorityFemaleVoices) {
+                selectedVoice = availableVoices.find(v => v.lang.includes('zh') && v.name.includes(vName));
                 if (selectedVoice) break;
             }
 
@@ -941,6 +941,7 @@
         }
     }
 
+    /* 💡 ОДТОЙ ҮГС РҮҮ ОРОХ БОЛОН БУЦАХАД ҮНДСЭН АХИЦЫГ САХИУЛАХ */
     function toggleFavOnly() {
         if (!isFavOnlyMode) {
             const favWords = rawWordsData.filter(w => favorites.includes(w.char));
@@ -948,17 +949,19 @@
                 alert("Та одоохондоо ямар нэгэн үг ⭐ одоор хадгалаагүй байна!");
                 return;
             }
+            savedGlobalIndex = globalIndex; // 🎯 Үндсэн явж байсан үгийн дугаарыг сануулав (Жш: 300)
             activeWordsList = favWords;
             isFavOnlyMode = true;
+            globalIndex = 0;
             document.getElementById('fav-toggle').style.background = "#f59e0b";
             document.getElementById('fav-toggle').style.color = "#ffffff";
         } else {
             activeWordsList = [...rawWordsData];
             isFavOnlyMode = false;
+            globalIndex = savedGlobalIndex; // 🎯 Буцаад байсан яг тэр үг рүүгээ шилжинэ!
             document.getElementById('fav-toggle').style.background = "#fef3c7";
             document.getElementById('fav-toggle').style.color = "#d97706";
         }
-        globalIndex = 0;
         loadWord(globalIndex);
     }
 
@@ -1190,7 +1193,13 @@
 
                 if (isFavOnlyMode) {
                     alert(`🎉 Баяр хүргэе! Та сонгосон ${total} одтой үгсийнхээ шалгалтыг ${score} зөв хариулж амжилттай давлаа!`);
-                    globalIndex = 0;
+                    // 🎯 Шалгалтын дараа ОДТОЙ үгийн горимыг автоматаар хааж, ҮНДСЭН 600 үгийнхээ байсан газарт авчирна
+                    isFavOnlyMode = false;
+                    activeWordsList = [...rawWordsData];
+                    globalIndex = savedGlobalIndex; // Үндсэн явж байсан үг дээр шилжинэ
+                    document.getElementById('fav-toggle').style.background = "#fef3c7";
+                    document.getElementById('fav-toggle').style.color = "#d97706";
+
                 } else {
                     const nextBatchStartIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
 
