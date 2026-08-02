@@ -653,10 +653,8 @@
     let rawWordsData = [];
     let activeWordsList = [];
 
-    /* 🌐 SUPABASE-ИЙН 'hsk4_words' ТАБЛААС 600 ҮГИЙГ 100% НАЙДВАРТАЙ ТАТАХ */
     async function fetchAllWordsFromSupabase() {
         try {
-            // REST API-аар шууд болон супабэйс клиентээр татах найдвартай арга
             const res = await fetch(`${SUPABASE_URL}/rest/v1/hsk4_words?select=*&order=id.asc&limit=600`, {
                 headers: {
                     'apikey': SUPABASE_KEY,
@@ -685,7 +683,7 @@
         return false;
     }
 
-    /* 🎙 МЭРГЭЖЛИЙН НАРИЙНХАН, ЦЭВЭР ТОД МАНДАРИН ХОТАД/ЭМЭГТЭЙ ХООЛОЙ СОНГОХ */
+    /* 🎙 ЦЭВЭР, ТУНГАЛАГ МАНДАРИН ЭМЭГТЭЙ ХООЛОЙ СОНГОХ ТӨХӨӨРӨМЖИЙН ТОХИРУУЛГА */
     function loadVoices() {
         if ('speechSynthesis' in window) {
             availableVoices = window.speechSynthesis.getVoices();
@@ -703,21 +701,21 @@
 
             const msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'zh-CN';
-            msg.rate = 0.88; // Хэт хурдан эсвэл удаан биш яг тохиромжтой
-            msg.pitch = 1.25; // Нарийнхан, сонсоход чихэнд чимэгтэй цэвэр хоолой
+            msg.rate = 0.85; 
+            msg.pitch = 1.1; // Цэвэр, шуугиангүй байгалийн аялгатай эмэгтэй тон
 
             if (availableVoices.length === 0) {
                 availableVoices = window.speechSynthesis.getVoices();
             }
 
-            // Шилдэг цэвэр мандарин хоолойг шүүж сонгоно
-            const priorityVoices = [
-                "Xiaoxiao", "Tingting", "Mei-Jia", "Sinji", "Google 普通话", "Chinese Female", "ZH-CN"
+            // Шилдэг цэвэр, нарийнхан тод мандарин эмэгтэй хоолойн жагсаалт
+            const femaleMandarinVoices = [
+                "Xiaoxiao", "Microsoft Xiaoxiao", "Google 普通话", "Tingting", "Mei-Jia", "Sinji", "ZH-CN Female"
             ];
 
             let selectedVoice = null;
-            for (let p of priorityVoices) {
-                selectedVoice = availableVoices.find(v => v.lang.includes('zh') && v.name.includes(p));
+            for (let name of femaleMandarinVoices) {
+                selectedVoice = availableVoices.find(v => v.lang.includes('zh') && v.name.includes(name));
                 if (selectedVoice) break;
             }
 
@@ -1015,7 +1013,7 @@
                 }
             }
             
-            isPaidUser = true; // Нэвтэрсэн хэрэглэгчид бүгдэд нь шууд 600 үгийг нээнэ
+            isPaidUser = true;
             statusElem.innerText = "👑 VIP";
             statusElem.className = "user-status vip-badge";
             document.getElementById('total-words-limit').innerText = "600";
@@ -1029,8 +1027,6 @@
 
     async function initApp() {
         updateStreak();
-
-        // 🌐 Supabase-ээс 600 үгийг бүрэн татна
         await fetchAllWordsFromSupabase();
 
         const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1137,9 +1133,9 @@
 
         const positionInBatch = (index % WORDS_PER_TEST) + 1;
         document.getElementById('current-index').innerText = positionInBatch;
-        document.getElementById('global-counter').innerText = index + 1;
+        document.getElementById('global-counter').innerText = isFavOnlyMode ? (index + 1) : (index + 1);
 
-        const progressPercentage = (positionInBatch / WORDS_PER_TEST) * 100;
+        const progressPercentage = (positionInBatch / Math.min(WORDS_PER_TEST, activeWordsList.length)) * 100;
         document.getElementById('progress-bar').style.width = progressPercentage + "%";
 
         document.getElementById('prev-btn').disabled = index === 0;
@@ -1167,10 +1163,14 @@
     }
 
     function startTest() {
-        const batchStart = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST;
-        const batchEnd = Math.min(batchStart + WORDS_PER_TEST, activeWordsList.length);
+        if (isFavOnlyMode) {
+            quizQuestions = [...activeWordsList];
+        } else {
+            const batchStart = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST;
+            const batchEnd = Math.min(batchStart + WORDS_PER_TEST, activeWordsList.length);
+            quizQuestions = activeWordsList.slice(batchStart, batchEnd);
+        }
         
-        quizQuestions = activeWordsList.slice(batchStart, batchEnd);
         currentQuizIndex = 0;
         score = 0;
 
@@ -1188,20 +1188,25 @@
                 document.getElementById('quiz-content').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
 
-                const nextBatchStartIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
-
-                if (nextBatchStartIndex < activeWordsList.length) {
-                    globalIndex = nextBatchStartIndex; // 🎯 Шууд дараагийн 16-30 дахь үг рүү шилжинэ!
-                    alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг давлаа. Дараагийн багц (${globalIndex + 1}-ээс эхлэх) нээгдлээ!`);
-                } else {
+                if (isFavOnlyMode) {
+                    alert(`🎉 Баяр хүргэе! Та сонгосон ${total} одтой үгсийнхээ шалгалтыг ${score} зөв хариулж амжилттай давлаа!`);
                     globalIndex = 0;
-                    alert("👏 Баяр хүргэе! Та бүх 600 үгийг сурч дууслаа.");
+                } else {
+                    const nextBatchStartIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
+
+                    if (nextBatchStartIndex < activeWordsList.length) {
+                        globalIndex = nextBatchStartIndex;
+                        alert(`🎉 Баяр хүргэе!\nТа ${total} асуултаас ${score} зөв хариулж, шалгалтыг давлаа. Дараагийн багц (${globalIndex + 1}-ээс эхлэх) нээгдлээ!`);
+                    } else {
+                        globalIndex = 0;
+                        alert("👏 Баяр хүргэе! Та бүх 600 үгийг сурч дууслаа.");
+                    }
                 }
                 
                 loadWord(globalIndex);
 
             } else {
-                alert(`❌ Өө! Та ${total} асуултаас ${score} авлаа. Дараагийн багц руу шилжихийн тулд 80%-иас дээш сайн хариулах шаардлагатай. Дахин оролдоно уу.`);
+                alert(`❌ Өө! Та ${total} асуултаас ${score} авлаа. Дараагийн хэсэг рүү шилжихийн тулд 80%-иас дээш сайн хариулах шаардлагатай. Дахин оролдоно уу.`);
                 document.getElementById('quiz-content').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
                 loadWord(globalIndex);
