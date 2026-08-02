@@ -44,6 +44,8 @@
             -webkit-user-select: none;
         }
 
+        .modal-active { overflow: hidden; }
+
         /* Utaсны дэлгэц дүүргэх тохиргоо */
         .app-card {
             background: var(--card-bg);
@@ -209,12 +211,6 @@
             touch-action: none;
         }
 
-        .character-box.active-box {
-            border-color: var(--primary);
-            background: #f0fdf4;
-            box-shadow: 0 0 12px rgba(79, 70, 229, 0.25);
-        }
-
         .example-box {
             background-color: #f8fafc;
             border-left: 4px solid #f59e0b;
@@ -333,7 +329,7 @@
 
         .modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center;
             z-index: 1000;
         }
         .modal-content {
@@ -347,6 +343,19 @@
         .play-btn-icon {
             background: #4f46e5; color: white; width: 26px; height: 26px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
+        }
+
+        /* 🎨 БҮТЭН ДЭЛГЭЦЭЭР ТОМ БИЧИХ MODAL DESIGN */
+        .big-canvas-box {
+            background: #ffffff;
+            border: 4px solid #4f46e5;
+            border-radius: 24px;
+            padding: 10px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
     </style>
 </head>
@@ -419,8 +428,8 @@
         <div class="btn-grid">
             <button onclick="speakWord()" class="btn-sound">🔊 Сонсох</button>
             <button onclick="toggleInfo()" class="btn-toggle">👁 Нуух / Харах</button>
-            <button id="draw-btn" onclick="triggerAnimation()" class="btn-draw">🎨 Зурах</button>
-            <button id="practice-btn" onclick="togglePracticeMode()" class="btn-practice">📝 Дадлага (Заавартай)</button>
+            <button id="draw-btn" onclick="openPracticeModal(false)" class="btn-draw">🎨 Зурах</button>
+            <button id="practice-btn" onclick="openPracticeModal(true)" class="btn-practice">📝 Дадлага (Заавартай)</button>
             <button onclick="speakCurrentWord()" class="btn-speak">🎙 Ярих</button>
         </div>
 
@@ -452,6 +461,28 @@
     </div>
     
     <div></div>
+</div>
+
+<!-- 🎨 БҮТЭН ДЭЛГЭЦЭЭР ТОМ ХАНЗ ЗУРАХ / ДАДЛАГА МOДАЛ -->
+<div id="big-practice-modal" class="modal hidden">
+    <div class="modal-content" style="background: #1e293b; color: white; text-align: center; border-radius: 28px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="text-align: left;">
+                <h3 id="modal-title" style="margin: 0; font-size: 1.1rem; color: #ffffff;">Ханз бичих</h3>
+                <span id="modal-step-info" style="font-size: 0.8rem; color: #cbd5e1;">1 / 2 ханз</span>
+            </div>
+            <button onclick="closePracticeModal()" style="background: rgba(255,255,255,0.2); color: white; border-radius: 50%; width: 32px; height: 32px; padding: 0;">✕</button>
+        </div>
+
+        <div class="big-canvas-box">
+            <div id="big-modal-target" style="width: 270px; height: 270px;"></div>
+        </div>
+
+        <div style="margin-top: 16px; display: flex; gap: 8px;">
+            <button onclick="resetModalWriter()" style="width: 50%; background: #475569; color: white;">🔄 Дахин эхлэх</button>
+            <button onclick="closePracticeModal()" style="width: 50%; background: var(--primary); color: white;">Болсон</button>
+        </div>
+    </div>
 </div>
 
 <!-- 🔒 НУУЦ ҮГ ШИНЭЧЛЭХ ЦОНХ -->
@@ -510,11 +541,15 @@
     let globalIndex = 0;
     let writers = [];
     let isInfoVisible = true;
-    let practiceState = 'off';
     let favorites = JSON.parse(localStorage.getItem('hsk4_favorites') || '[]');
     let activeWordsList = [];
     let isFavOnlyMode = false;
     let isAnimating = false;
+
+    // Modal Drawing Variables
+    let bigModalWriter = null;
+    let currentModalCharIndex = 0;
+    let isGuideEnabled = true;
 
     // AUDIO & TTS VOICES
     let availableVoices = [];
@@ -916,11 +951,6 @@
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
 
-        practiceState = 'off';
-        const pBtn = document.getElementById('practice-btn');
-        pBtn.innerText = "📝 Дадлага (Заавартай)";
-        pBtn.style.background = "#8b5cf6";
-
         const word = activeWordsList[index];
         document.getElementById('pinyin').innerText = word.pinyin;
         document.getElementById('translation').innerText = word.mn;
@@ -1080,67 +1110,68 @@
     }
 
     function handleHanziClick() {
-        if (!isAnimating && practiceState === 'off') {
+        if (!isAnimating) {
             triggerAnimation();
         }
     }
 
-    function togglePracticeMode() {
-        const pBtn = document.getElementById('practice-btn');
+    /* 🎨 БҮТЭН ДЭЛГЭЦЭЭР ТОМ ХАНЗ БИЧИХ MODAL ЛОГИК */
+    function openPracticeModal(showGuide) {
+        isGuideEnabled = showGuide;
+        currentModalCharIndex = 0;
 
-        if (practiceState === 'off') {
-            practiceState = 'guided';
-            pBtn.innerText = "📝 Дадлага (👁 Бүдэг заавартай)";
-            pBtn.style.background = "#8b5cf6";
-            startInteractivePractice(true);
-        } else if (practiceState === 'guided') {
-            practiceState = 'blind';
-            pBtn.innerText = "📝 Дадлага (🙈 Зааваргүй шалгалт)";
-            pBtn.style.background = "#d97706";
-            startInteractivePractice(false);
-        } else {
-            practiceState = 'off';
-            pBtn.innerText = "📝 Дадлага (Заавартай)";
-            pBtn.style.background = "#8b5cf6";
-            renderHanzi(activeWordsList[globalIndex].char, true);
-        }
+        document.getElementById('big-practice-modal').classList.remove('hidden');
+        document.body.classList.add('modal-active');
+        document.getElementById('modal-title').innerText = showGuide ? "📝 Заавартай бичих" : "🎨 Бичиж турших";
+
+        loadModalCharacter(currentModalCharIndex);
     }
 
-    function startInteractivePractice(showGuide) {
-        renderHanzi(activeWordsList[globalIndex].char, showGuide);
-        let currentIdx = 0;
+    function closePracticeModal() {
+        document.getElementById('big-practice-modal').classList.add('hidden');
+        document.body.classList.remove('modal-active');
+    }
 
-        function highlightBox(index) {
-            document.querySelectorAll('.character-box').forEach((b, idx) => {
-                if (idx === index) b.classList.add('active-box');
-                else b.classList.remove('active-box');
-            });
-        }
+    function loadModalCharacter(charIndex) {
+        const container = document.getElementById('big-modal-target');
+        container.innerHTML = '';
 
-        function runQuizForChar(index) {
-            if (index >= writers.length) {
-                document.querySelectorAll('.character-box').forEach(b => b.classList.remove('active-box'));
-                
+        const wordCharText = activeWordsList[globalIndex].char;
+        const singleChar = wordCharText[charIndex];
+
+        document.getElementById('modal-step-info').innerText = `Дасгал: ${charIndex + 1} / ${wordCharText.length} (${singleChar})`;
+
+        bigModalWriter = HanziWriter.create('big-modal-target', singleChar, {
+            width: 270,
+            height: 270,
+            padding: 10,
+            showOutline: isGuideEnabled,
+            strokeColor: '#4f46e5',
+            outlineColor: '#94a3b8',
+            drawingColor: '#059669',
+            drawingWidth: 16,
+            showCharacter: false
+        });
+
+        bigModalWriter.quiz({
+            showHintAfterMisses: 2,
+            strokeFadeDuration: 200,
+            onComplete: function() {
                 setTimeout(() => {
-                    alert("🎉 Баяр хүргэе! Ханзыг дарааллын дагуу зөв бичиж дуусгалаа.");
-                }, 500);
-                
-                return;
+                    if (currentModalCharIndex < wordCharText.length - 1) {
+                        currentModalCharIndex++;
+                        loadModalCharacter(currentModalCharIndex);
+                    } else {
+                        alert("🎉 Баяр хүргэе! Энэ үгийн бүх ханзыг зөв бичиж дуусгалаа.");
+                        closePracticeModal();
+                    }
+                }, 400);
             }
+        });
+    }
 
-            highlightBox(index);
-
-            writers[index].quiz({
-                showHintAfterMisses: false,
-                highlightOnMistake: false,
-                strokeFadeDuration: 200,
-                onComplete: function() {
-                    runQuizForChar(index + 1);
-                }
-            });
-        }
-
-        runQuizForChar(currentIdx);
+    function resetModalWriter() {
+        loadModalCharacter(currentModalCharIndex);
     }
 
     // 🎙 ИЛҮҮ АЮУЛГҮЙ МИКРОФОН САНАЛ АВАХ ФУНКЦ
