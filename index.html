@@ -481,7 +481,7 @@
             <div id="progress-bar" class="progress-bar"></div>
         </div>
         <div class="global-progress-text">
-            Нийт сурсан: <span id="global-counter" style="color: var(--primary); font-weight: 800;">1</span> / <span id="total-words-limit">600</span> үг
+            Нийт сурсан: <span id="global-counter" style="color: var(--primary); font-weight: 800;">1</span> / <span id="total-words-limit">15</span> үг
         </div>
 
         <div class="word-header">
@@ -1034,15 +1034,33 @@
         }
     }
 
+    // 👑 VIP ЭРХ ШАЛГАХ ХЭСЭГ (subscription_end огнооноос хамаарна)
     async function checkUserSubscription(user) {
         try {
             const statusElem = document.getElementById('user-vip-status');
-            isPaidUser = true;
-            statusElem.innerText = "👑 VIP";
-            statusElem.className = "user-status vip-badge";
-            document.getElementById('total-words-limit').innerText = "600";
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('subscription_end')
+                .eq('id', user.id)
+                .single();
+
+            const now = new Date();
+            const subEnd = profile && profile.subscription_end ? new Date(profile.subscription_end) : null;
+
+            if (subEnd && subEnd > now) {
+                isPaidUser = true;
+                statusElem.innerText = "👑 VIP";
+                statusElem.className = "user-status vip-badge";
+                document.getElementById('total-words-limit').innerText = "600";
+            } else {
+                isPaidUser = false;
+                statusElem.innerText = "FREE (15 үг)";
+                statusElem.className = "user-status free-badge";
+                document.getElementById('total-words-limit').innerText = "15";
+            }
         } catch (err) {
             console.error("Profile check error:", err);
+            isPaidUser = false;
         }
     }
 
@@ -1149,6 +1167,13 @@
     async function loadWord(index) {
         if(!activeWordsList || activeWordsList.length === 0) return;
 
+        // 🔒 FREE ХЭРЭГЛЭГЧ 15-ААС ДЭЭШ ҮГ РҮҮ ОРОХ ГЭЭД БАЙВАЛ ХААНА
+        if (!isPaidUser && index >= WORDS_PER_TEST && !isFavOnlyMode) {
+            alert("🔒 Үнэгүй эрхийн 15 үг дууслаа. Цааш 600 үгийг бүрэн үзэхийн тулд VIP эрхээ сунгуулна уу!");
+            globalIndex = WORDS_PER_TEST - 1;
+            index = WORDS_PER_TEST - 1;
+        }
+
         if(index >= activeWordsList.length) index = activeWordsList.length - 1;
         if(index < 0) index = 0;
 
@@ -1182,6 +1207,10 @@
         const currentBatchMaxIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + (WORDS_PER_TEST - 1);
 
         if (globalIndex === currentBatchMaxIndex && !isFavOnlyMode) {
+            if (!isPaidUser && globalIndex >= WORDS_PER_TEST - 1) {
+                alert("🔒 Үнэгүй эрхийн 15 үг дууслаа. Цааш үргэлжлүүлэхийн тулд VIP эрхээ сунгуулна уу!");
+                return;
+            }
             alert("🎉 Энэ багцын 15 үг дууслаа! Доорх 'Шалгах тест өгөх' товчийг дарж шалгалтаа өгөөд дараагийн багц руу шилжээрэй.");
             return;
         }
@@ -1235,6 +1264,12 @@
 
                 } else {
                     const nextBatchStartIndex = Math.floor(globalIndex / WORDS_PER_TEST) * WORDS_PER_TEST + WORDS_PER_TEST;
+
+                    if (!isPaidUser && nextBatchStartIndex >= WORDS_PER_TEST) {
+                        alert("🔒 Баяр хүргэе, шалгалтаа амжилттай давлаа! Гэвч дараагийн багц руу шилжихийн тулд VIP эрхээ сунгуулна уу.");
+                        loadWord(globalIndex);
+                        return;
+                    }
 
                     if (nextBatchStartIndex < activeWordsList.length) {
                         globalIndex = nextBatchStartIndex;
@@ -1507,8 +1542,8 @@
     }
 
     window.onload = initApp;
-    
-    // Service Worker бүртгэх хэсэг (ЭНИЙГ НЭМНЭ)
+
+    // Service Worker бүртгэл (PWA суулгахад зориулагдсан)
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
             .then(() => console.log('Service Worker Registered'))
@@ -1517,4 +1552,3 @@
 </script>
 </body>
 </html>
-
